@@ -109,16 +109,14 @@
 /**
  * instruction: cmp
  *
- * syntax: cmp [gp reg],[value]
+ * syntax: cmp reg, #value | reg | @mem
  *
- * compare the value in general purpose register [reg] with immediate
+ * compare the value in general purpose register reg with immediate
  * value. the result is placed in the cpu conditional register (cr)
  *
- * TODO: add compare from memory or other register
- *
- * | 1001 1000 |  0000  | 0000 | 0000 0000 0000 0000 |
- * 0           8        12     16
- *    instr       reg     src          value
+ * | 1001 1000 |  0000  | 00 | 00 | 0000 0000 0000 0000 |
+ * 0           8          12      16
+ *    instr       reg     src  MBZ         value
 */
 #define cmp		0x11
 

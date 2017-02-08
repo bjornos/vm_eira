@@ -74,7 +74,10 @@ uint32_t rom[] = {
 		 * ... if there is a program loaded there.
 		 * but until those details are worked out, we don't do anything */
 		(mov << 0) | (R1 << 8) | OP_SRC_MEM | OP_DST_REG | (8192 << 16),
-		(cmp << 0) | (R1 << 8) | (0xcb << 16),
+		//(cmp << 0) | (R1 << 8) | (0xcb << 16),
+		//(cmp << 0) | (R1 << 8) | OP_DST_REG | OP_SRC_MEM | (8192 << 16),
+		(mov << 0) | (R2 << 8) | OP_DST_REG | (0xcb << 16),
+		(cmp << 0) | (R1 << 8) | OP_DST_REG | OP_SRC_REG | (2 << 16),
 		(breq << 0) | (1 << 16), /* jump to address 1 */
 		(nop << 0),
 		(halt << 0),

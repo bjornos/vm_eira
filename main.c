@@ -155,7 +155,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, const char dbg_instr[])
 			printf("RAM SRC = 0x%x\n",src);
 			goto out;
 		}
-		/* immidiate value */
+		/* immediate value */
 		DBG(printf("%d -> GP_REG%d\n",local_src,local_dst));
 		src = local_src;
 		goto out;
@@ -179,18 +179,11 @@ out:
 		return src;
 }
 
-void compare(uint32_t *instr)
+void compare(uint16_t t1, uint16_t t2)
 {
-	uint8_t c1;
-	uint16_t c2;
-	int d;
+	int d = t2 - t1;
 
 	printf("%s --- ",__func__);
-
-	c1 = machine.GP_REG[(*instr >> 8) & 0x0f];
-	c2 = (*instr >> 16) & 0xffff;
-
-	d = c2 - c1;
 
 	if (d == 0)
 		machine.cpu_regs.cr = COND_EQ;
@@ -199,7 +192,7 @@ void compare(uint32_t *instr)
 	if (d < 0)
 		machine.cpu_regs.cr = COND_LE;
 
-	printf("c1:%d c2:%d d:%d",c1, c2,d);
+	printf("t1:%d t2:%d d:%d\n",t1, t2,d);
 }
 
 
@@ -285,7 +278,8 @@ void decode_instruction(uint32_t *instr)
 				break;
 		case cmp: DBG(printf("cmp "));
 				machine.cpu_regs.cr = COND_UNDEFINED;
-				compare(instr);
+				src = mnemonic(instr, &dst, "cmp");
+				compare(src, *dst);
 				DBG(printf("cr: 0x%x\n", machine.cpu_regs.cr));
 				break;
 		case breq: DBG(printf("breq "));
