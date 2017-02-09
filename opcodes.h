@@ -28,7 +28,7 @@
  *
  * | 0100 0000 | 0000 | 00  | 00 | 0000 0000 0000 0000 |
  * 0           8      12    14   16                    31
- *               reg  src    dst    value/memory/reg
+ *               reg  src    dst    #val | @mem | reg
  *                    type   type
  *
  * if destination is memory, the address is stored in the upper 16 bits and
@@ -52,7 +52,7 @@
  *
  * | 1100 0000 | 0000 | 00  | 00 | 0000 0000 0000 0000 |
  * 0           8      12    14   16                    31
- *                reg  src    dst    value/memory/reg
+ *                reg  src    dst   #val | @mem | reg
  *                     type   type
  *
  * if destination is memory, the address is stored in the upper 16 bits and
@@ -75,7 +75,7 @@
  *
  *  | 0010 0000 | 0000 | 00  | 00 | 0000 0000 0000 0000 |
  *  0           8      12    14   16                    31
- *                 reg  src    dst    value/memory/reg
+ *                 reg  src    dst   #val | @mem | reg
  *                      type   type
  *
  * if destination is memory, the address is stored in the upper 16 bits and
