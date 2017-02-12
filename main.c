@@ -30,6 +30,13 @@ enum conditions {
 	COND_UNDEFINED
 };
 
+enum exceptions {
+	EXC_INSTR,
+	EXC_MEM,
+	EXC_REG,
+	EXC_PRG,
+};
+
 enum screen_adapter_capabilities {
 	screen_setxy,
 	screen_getxy,
@@ -136,8 +143,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, const char dbg_instr[])
 			/* value from register */
 			DBG(printf("GP_REG%d -> GP_REG%d\n",local_src, local_dst));
 			if (local_src > GP_REG_MAX) {
-				machine.cpu_regs.exception = 1;
-				printf("exception: register %d out of bounds.\n",local_src);
+				machine.cpu_regs.exception = EXC_REG;
 				goto out;
 			}
 			src = machine.GP_REG[local_src];
@@ -147,8 +153,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, const char dbg_instr[])
 			/* copy from memory */
 			DBG(printf("0x%x -> GP_REG%d\n",local_src,local_dst));
 			if (local_src > RAM_SIZE) {
-				machine.cpu_regs.exception = 1;
-				printf("exception: cannot access ram@0x%x",local_src); /* fixme: MMU? */
+				machine.cpu_regs.exception = EXC_MEM;
 				goto out;
 			}
 			src = machine.RAM[local_src] & 0xff;
@@ -167,8 +172,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, const char dbg_instr[])
 		local_dst = (*instr >> 16) & 0xffff;
 		DBG(printf("GP_REG%d -> @%d\n",local_src,local_dst));
 		if (local_dst > RAM_SIZE) {
-			printf("exception: cannot access ram @ 0x%x\n",local_dst); /* fixme: MMU? */
-			machine.cpu_regs.exception = 1;
+			machine.cpu_regs.exception = EXC_MEM;
 			goto out;
 		}
 		*(dst) = (uint8_t *)machine.RAM + local_dst;
@@ -247,6 +251,9 @@ void decode_instruction(uint32_t *instr)
 	uint16_t src;
 	uint16_t *dst;
 
+	if (machine.cpu_regs.exception)
+		return;
+
 	DBG(printf("%s 0x%x\n",__func__, *instr));
 
 	opcode = *instr & 0xff;
@@ -298,11 +305,9 @@ void decode_instruction(uint32_t *instr)
 		case screenout: DBG(printf("outscreen\n"));
 				screen_request(instr,screen_setc);
 				break;
-		default: printf("illegal instruction 0x%X  pc=%ld\n",*instr,machine.cpu_regs.pc);
-				machine.cpu_regs.panic = 1;
+		default: machine.cpu_regs.exception = EXC_INSTR;
 				break;
 	}
-	machine.cpu_regs.exception = 0;
 }
 
 
@@ -333,12 +338,51 @@ void load_program(uint32_t *prg) {
 
 	memcpy(&machine.RAM[4], prg, prg_size);
 	/* pc0 will be program header/size */
-	machine.cpu_regs.pc = 2;
+	machine.cpu_regs.pc = 1;
 }
 
+void cpu_exception(long pc) {
+	printf("!! %s: ",__func__);
+
+	switch(machine.cpu_regs.exception) {
+	case EXC_INSTR:
+			printf("illegal instruction 0x%X ",
+					machine.RAM[pc]);
+			break;
+	case EXC_MEM:
+			printf("cannot access memory ");
+			break;
+	case EXC_REG:
+			printf("cannot access register ");
+			break;
+	case EXC_PRG:
+			printf("stray program ");
+			break;
+	default:
+			printf("unknown exception %d",
+				machine.cpu_regs.exception);
+			break;
+	}
+
+	printf("[pc: %ld]\n", machine.cpu_regs.pc);
+
+	machine.cpu_regs.panic = 1;
+}
+
+__inline static long cpu_fetch_instruction(void){
+	machine.cpu_regs.exception = 0;
+
+	machine.cpu_regs.pc++;
+	if (machine.cpu_regs.pc >= RAM_SIZE / 4)
+		machine.cpu_regs.exception = EXC_PRG;
+
+	/* each instruction is 4 bytes */
+	return machine.cpu_regs.pc * 4;
+}
 
 int main(void)
 {
+	long this_instr;
 
 	reset_cpu();
 	init_screen();
@@ -372,15 +416,16 @@ int main(void)
 #endif
 
 	while(!machine.cpu_regs.panic) {
-		decode_instruction((uint32_t *)&machine.RAM[machine.cpu_regs.pc * 4]);
+		this_instr = cpu_fetch_instruction();
+
+		decode_instruction((uint32_t *)&machine.RAM[this_instr]);
+
+		if (machine.cpu_regs.exception)
+			cpu_exception(this_instr);
+
 		if (machine.screen_adapter.refresh) {
 			screen_retrace();
 			usleep(100 * 1000);
-		}
-		machine.cpu_regs.pc++;
-		if ( (machine.cpu_regs.pc * 4) >= RAM_SIZE) {
-			machine.cpu_regs.panic = 1;
-			printf("stray program...\n");
 		}
 	}
 
