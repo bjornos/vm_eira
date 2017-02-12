@@ -17,8 +17,9 @@
 
 #define RAM_SIZE	0xffff
 
-#define SCREEN_MEM_START 0x7fff
-#define PROGRAM_MEM_START 0x1000
+#define MEM_START_SCREEN	0x7fff
+#define MEM_START_PROGRAM	0x1000
+#define MEM_START_ROM		0x200
 
 enum conditions {
 	COND_EQ,
@@ -206,10 +207,10 @@ void screen_retrace(void)
 
 	gotoxy(machine.screen_adapter.x,machine.screen_adapter.y);
 
-	machine.screen_adapter.screen_mem = machine.RAM + SCREEN_MEM_START;
+	machine.screen_adapter.screen_mem = machine.RAM + MEM_START_SCREEN;
 	screen_addr =	/* FIXME: respect screen mode */
 			(machine.screen_adapter.y * 40) + machine.screen_adapter.x;
-	machine.screen_adapter.screen_mem = machine.RAM + SCREEN_MEM_START + screen_addr;
+	machine.screen_adapter.screen_mem = machine.RAM + MEM_START_SCREEN + screen_addr;
 
 	printf("%c",(char)*machine.screen_adapter.screen_mem & 0xff);
 
@@ -235,7 +236,7 @@ void screen_request(uint32_t *instr, int request)
 					(machine.screen_adapter.y * 40) + machine.screen_adapter.x;
 			machine.screen_adapter.c = (*instr >> 8) & 0xff;
 			machine.screen_adapter.screen_mem =
-					machine.RAM + SCREEN_MEM_START + screen_addr;
+					machine.RAM + MEM_START_SCREEN + screen_addr;
 			*machine.screen_adapter.screen_mem = machine.screen_adapter.c;
 			machine.screen_adapter.refresh = 1;
 			DBG(printf("c:%c \n", (char)machine.screen_adapter.c));
@@ -280,8 +281,8 @@ void decode_instruction(uint32_t *instr)
 					*dst -= src;
 				break;
 		case jmp: DBG(printf("jmp "));
-				machine.cpu_regs.pc = (*instr >> 8) - 1; /* compensate for pc++ */
-				DBG(printf("0x%x\n", machine.cpu_regs.pc));
+				machine.cpu_regs.pc = (*instr >> 8) - 4; /* compensate for pc++ */
+				DBG(printf("%ld\n", machine.cpu_regs.pc));
 				break;
 		case cmp: DBG(printf("cmp "));
 				machine.cpu_regs.cr = COND_UNDEFINED;
@@ -292,8 +293,8 @@ void decode_instruction(uint32_t *instr)
 		case breq: DBG(printf("breq "));
 				if (machine.cpu_regs.cr == COND_EQ) {// todo: make a jump func
 					machine.cpu_regs.pc = (*instr >> 16);
-					//machine.cpu_regs.pc--; /* compensate for pc++ */
-					printf("jump to %ld \n",machine.cpu_regs.pc + 1);
+					printf("jump to %ld \n",machine.cpu_regs.pc);
+					machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
 				}
 				break;
 		case clrscr: DBG(printf("clrscr\n"));
@@ -328,17 +329,17 @@ void init_screen(void) {
 	machine.screen_adapter.c = '\0';
 	machine.screen_adapter.mode = 0;
 
-	machine.screen_adapter.screen_mem = machine.RAM + SCREEN_MEM_START;
+	machine.screen_adapter.screen_mem = machine.RAM + MEM_START_SCREEN;
 	memset(machine.screen_adapter.screen_mem, 0x00, screen_modes[machine.screen_adapter.mode]);
 	machine.screen_adapter.refresh = 0;
 }
 
-void load_program(uint32_t *prg) {
+void load_program(uint32_t *prg, uint16_t addr) {
 	int prg_size = prg[0];
 
-	memcpy(&machine.RAM[4], prg, prg_size);
+	memcpy(&machine.RAM[addr], prg, prg_size);
 	/* pc0 will be program header/size */
-	machine.cpu_regs.pc = 1;
+	machine.cpu_regs.pc = addr;
 }
 
 void cpu_exception(long pc) {
@@ -372,17 +373,17 @@ void cpu_exception(long pc) {
 __inline static long cpu_fetch_instruction(void){
 	machine.cpu_regs.exception = 0;
 
-	machine.cpu_regs.pc++;
-	if (machine.cpu_regs.pc >= RAM_SIZE / 4)
+	/* each instruction is 4 bytes */
+	machine.cpu_regs.pc += 4;
+	if (machine.cpu_regs.pc >= (RAM_SIZE - 3))
 		machine.cpu_regs.exception = EXC_PRG;
 
-	/* each instruction is 4 bytes */
-	return machine.cpu_regs.pc * 4;
+	return machine.cpu_regs.pc;
 }
 
 int main(void)
 {
-	long this_instr;
+	long instr_p;
 
 	reset_cpu();
 	init_screen();
@@ -392,10 +393,10 @@ int main(void)
 	machine.RAM[60] = 0xdd;
 	machine.RAM[61] = 0xEE;
 
-	machine.RAM[SCREEN_MEM_START] = 0xff;
-	machine.RAM[SCREEN_MEM_START+1] = 6;
-	machine.RAM[SCREEN_MEM_START+2] = 2;
-	machine.RAM[SCREEN_MEM_START+8] = 8;
+	machine.RAM[MEM_START_SCREEN] = 0xff;
+	machine.RAM[MEM_START_SCREEN+1] = 6;
+	machine.RAM[MEM_START_SCREEN+2] = 2;
+	machine.RAM[MEM_START_SCREEN+8] = 8;
 
 	machine.GP_REG[1] = 10;
 	machine.GP_REG[2] = 11;
@@ -407,28 +408,26 @@ int main(void)
 
 	load_program(program_unit_test);
 #else
-	machine.RAM[PROGRAM_MEM_START] = 0xdc;
-	machine.RAM[PROGRAM_MEM_START + 1] = 0xba;
-	machine.RAM[PROGRAM_MEM_START + 2] = 0xfe;
-	machine.RAM[PROGRAM_MEM_START + 3] = 0xdc;
+	machine.RAM[MEM_START_PROGRAM] = 0xdc;
+	machine.RAM[MEM_START_PROGRAM + 1] = 0xba;
+	machine.RAM[MEM_START_PROGRAM + 2] = 0xfe;
+	machine.RAM[MEM_START_PROGRAM + 3] = 0xdc;
 	machine.RAM[8192] = 0xcb;
-	load_program(rom);
+	load_program(rom, MEM_START_ROM);
 #endif
 
 	while(!machine.cpu_regs.panic) {
-		this_instr = cpu_fetch_instruction();
-
-		decode_instruction((uint32_t *)&machine.RAM[this_instr]);
+		instr_p = cpu_fetch_instruction();
+		decode_instruction((uint32_t *)&machine.RAM[instr_p]);
 
 		if (machine.cpu_regs.exception)
-			cpu_exception(this_instr);
+			cpu_exception(instr_p);
 
 		if (machine.screen_adapter.refresh) {
 			screen_retrace();
 			usleep(100 * 1000);
 		}
 	}
-
 #if UNIT_TEST
 	assert(machine.GP_REG[0] == 238);
 	assert(machine.GP_REG[1] == 255);
