@@ -1,18 +1,14 @@
-# All Target
+CC=gcc
+CFLAGS=-c -Wall -g
+
 all: vm_eira
 
-# Tool invocations
-vm_eira: $(OBJS) $(USER_OBJS)
-	@echo 'Building target: $@'
-	@echo 'Invoking: Cross GCC Linker'
-	gcc  -o "vm_eira" main.c
-	@echo 'Finished building target: $@'
-	@echo ' '
+vm_eira: main.o
+	$(CC) main.o -o vm_eira
 
-# Other Targets
+main.o: main.c
+	$(CC) $(CFLAGS) main.c
+
 clean:
-	-$(RM) $(EXECUTABLES)$(OBJS)$(C_DEPS) vm_eira
-	-@echo ' '
+	rm *o vm_eira
 
-.PHONY: all clean dependents
-.SECONDARY:
