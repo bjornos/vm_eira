@@ -3,6 +3,10 @@
 
 #define PROGRAM_MAGIC 0xdcbafedc
 
+#define MEM_START_SCREEN	0x7fff
+#define MEM_START_PROGRAM	0x1000
+#define MEM_START_ROM		0x200
+
 /**
  * instruction: halt
  *
@@ -91,6 +95,27 @@
  */
 #define mov		0x04
 
+/**
+ * instruction: movi - move integer (16-bit)
+ *
+ * syntax: movi dest, source
+ *
+ *  | 0010 0000 | 0000 | 00  | 00 | 0000 0000 0000 0000 |
+ *  0           8      12    14   16                    31
+ *                 reg  src    dst   #val | @mem | reg
+ *                      type   type
+ *
+ * if destination is memory, the address is stored in the upper 16 bits and
+ * the value is taken from registerX in bits 8-12. It is NOT possible to move
+ * immediate values directly to memory.
+ *
+ * example usage:
+ *  mov r9,@4096  - r9 = (uint16_t)&ram[4096]
+ *  movi r10,8192
+ *  movi @128, r10 - ram[128] = 0 (r10 & 0xff), ram[129] = 32 (r10 >> 16)
+ *
+ */
+#define movi	0x05
 
 /**
  * instruction: jmp
@@ -133,6 +158,18 @@
 */
 #define breq	0x12
 
+/**
+ * instruction: branch not equal
+ *
+ * syntax: brneq [address]
+ *
+ * jump to address if compare result in conditional register is COND_NEQ
+ *
+ * | 0001 0010 | 0000 0000 | 0000 0000 0000 0000 |
+ * 0           8           16
+ *    instr       reserved           addr
+*/
+#define brneq	0x13
 
 
 

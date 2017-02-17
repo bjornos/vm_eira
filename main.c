@@ -16,19 +16,22 @@
 #define CPU_VERSION	0x1
 
 #define RAM_SIZE	0xffff
+#define BYTE_SIZE 0
+#define INT_SIZE
 
-#define MEM_START_SCREEN	0x7fff
-#define MEM_START_PROGRAM	0x1000
-#define MEM_START_ROM		0x200
+enum op_size {
+	SIZE_BYTE,
+	SIZE_INT,
+};
 
 enum conditions {
-	COND_EQ,
-	COND_NEQ,
-	COND_ZERO,
-	COND_NZERO,
-	COND_GR,
-	COND_LE,
-	COND_UNDEFINED
+	COND_EQ = 1,
+	COND_NEQ = 2,
+	COND_ZERO = 4,
+	COND_NZERO = 8,
+	COND_GR = 16,
+	COND_LE = 32,
+	COND_UNDEFINED = 64,
 };
 
 enum exceptions {
@@ -120,12 +123,13 @@ void dump_regs(void)
 		printf("\n");
 	}
 	printf("\n");
+	printf("CR: %ld PC: %d\n",machine.cpu_regs.cr,machine.cpu_regs.pc);
 }
 
 
 
 /* fixme: func name */
-uint16_t mnemonic(uint32_t *instr, uint16_t **dst, const char dbg_instr[])
+uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_instr[])
 {
 	uint16_t local_src;
 	uint16_t local_dst;
@@ -157,8 +161,13 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, const char dbg_instr[])
 				machine.cpu_regs.exception = EXC_MEM;
 				goto out;
 			}
-			src = machine.RAM[local_src] & 0xff;
-			printf("RAM SRC = 0x%x\n",src);
+			if (opsize == SIZE_INT) {
+				src = machine.RAM[local_src];
+				src |= machine.RAM[local_src + 1] << 8;
+			} else
+				src = machine.RAM[local_src];
+
+			printf("RAM SRC = 0x%x  opsize=%d\n",src,opsize);
 			goto out;
 		}
 		/* immediate value */
@@ -172,11 +181,17 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, const char dbg_instr[])
 		local_src = (*instr >> 8) & 0x0f;
 		local_dst = (*instr >> 16) & 0xffff;
 		DBG(printf("GP_REG%d -> @%d\n",local_src,local_dst));
+
 		if (local_dst > RAM_SIZE) {
 			machine.cpu_regs.exception = EXC_MEM;
 			goto out;
 		}
-		*(dst) = (uint8_t *)machine.RAM + local_dst;
+
+		if (opsize == SIZE_INT)
+			*(dst) = (uint16_t *)machine.RAM + local_dst; // FIXME: verify
+		else
+			*(dst) = (uint8_t *)machine.RAM + local_dst;
+
 		src = machine.GP_REG[local_src] & 0xff;
 	}
 
@@ -191,13 +206,13 @@ void compare(uint16_t t1, uint16_t t2)
 	printf("%s --- ",__func__);
 
 	if (d == 0)
-		machine.cpu_regs.cr = COND_EQ;
+		machine.cpu_regs.cr = COND_EQ | COND_ZERO;
 	if (d > 0)
-		machine.cpu_regs.cr = COND_GR;
+		machine.cpu_regs.cr = COND_GR | COND_NEQ;
 	if (d < 0)
-		machine.cpu_regs.cr = COND_LE;
+		machine.cpu_regs.cr = COND_LE | COND_NEQ;
 
-	printf("t1:%d t2:%d d:%d\n",t1, t2,d);
+	printf("t1:%d t2:%d d:%d desc: %d\n",t1, t2,d,machine.cpu_regs.cr);
 }
 
 
@@ -266,17 +281,22 @@ void decode_instruction(uint32_t *instr)
 				machine.cpu_regs.panic = 1;
 				break;
 		case mov:
-				src = mnemonic(instr, &dst, "mov");
+				src = mnemonic(instr, &dst, SIZE_BYTE, "mov");
+				if (!machine.cpu_regs.exception)
+					*dst = src;
+				break;
+		case movi:
+				src = mnemonic(instr, &dst, SIZE_INT,"movi");
 				if (!machine.cpu_regs.exception)
 					*dst = src;
 				break;
 		case add:
-				src = mnemonic(instr, &dst, "add");
+				src = mnemonic(instr, &dst,SIZE_BYTE, "add");
 				if (!machine.cpu_regs.exception)
 					*dst += src;
 				break;
 		case sub: DBG(printf("sub\n"));
-				src = mnemonic(instr, &dst, "sub");
+				src = mnemonic(instr, &dst,SIZE_BYTE,"sub");
 				if (!machine.cpu_regs.exception)
 					*dst -= src;
 				break;
@@ -285,16 +305,25 @@ void decode_instruction(uint32_t *instr)
 				DBG(printf("%ld\n", machine.cpu_regs.pc));
 				break;
 		case cmp: DBG(printf("cmp "));
-				machine.cpu_regs.cr = COND_UNDEFINED;
-				src = mnemonic(instr, &dst, "cmp");
+				machine.cpu_regs.cr &= COND_UNDEFINED;
+				src = mnemonic(instr, &dst, SIZE_INT, "cmp");
 				compare(src, *dst);
 				DBG(printf("cr: 0x%x\n", machine.cpu_regs.cr));
 				break;
 		case breq: DBG(printf("breq "));
-				if (machine.cpu_regs.cr == COND_EQ) {// todo: make a jump func
+				if (machine.cpu_regs.cr &= COND_EQ) {// todo: make a jump func
 					machine.cpu_regs.pc = (*instr >> 16);
 					printf("jump to %ld \n",machine.cpu_regs.pc);
 					machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
+				}
+				break;
+		case brneq: DBG(printf("brneq "));
+				if (machine.cpu_regs.cr &= COND_NEQ) {// todo: make a jump func
+					printf("pc = %ld \n",machine.cpu_regs.pc);
+					machine.cpu_regs.pc = (*instr >> 16);
+					printf("jump to %ld \n",machine.cpu_regs.pc);
+					machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
+					//exit(0);
 				}
 				break;
 		case clrscr: DBG(printf("clrscr\n"));
@@ -321,6 +350,8 @@ void reset_cpu(void) {
 	machine.cpu_regs.exception = 0;
 	machine.cpu_regs.panic = 0;
 	machine.cpu_regs.cr = COND_UNDEFINED;
+
+	machine.cpu_regs.pc = MEM_START_ROM + 16;
 }
 
 void init_screen(void) {
@@ -335,11 +366,10 @@ void init_screen(void) {
 }
 
 void load_program(uint32_t *prg, uint16_t addr) {
-	int prg_size = prg[0];
+	int prg_size = prg[3];
 
+	/* todo: sanity check for prg_size */
 	memcpy(&machine.RAM[addr], prg, prg_size);
-	/* pc0 will be program header/size */
-	machine.cpu_regs.pc = addr;
 }
 
 void cpu_exception(long pc) {
@@ -381,40 +411,21 @@ __inline static long cpu_fetch_instruction(void){
 	return machine.cpu_regs.pc;
 }
 
-int main(void)
+int main(int argc,char *argv[])
 {
 	long instr_p;
+	int run_test_prg = 0;
+
+	if ((argc == 2) && (strcmp(argv[1],"--test") == 0))
+		run_test_prg = 1;
 
 	reset_cpu();
 	init_screen();
-#if UNIT_TEST
-	machine.RAM[58] = 0xba;
-	machine.RAM[59] = 0xAA;
-	machine.RAM[60] = 0xdd;
-	machine.RAM[61] = 0xEE;
 
-	machine.RAM[MEM_START_SCREEN] = 0xff;
-	machine.RAM[MEM_START_SCREEN+1] = 6;
-	machine.RAM[MEM_START_SCREEN+2] = 2;
-	machine.RAM[MEM_START_SCREEN+8] = 8;
-
-	machine.GP_REG[1] = 10;
-	machine.GP_REG[2] = 11;
-	machine.GP_REG[3] = 12;
-	machine.GP_REG[4] = 13;
-	machine.GP_REG[5] = 14;
-	machine.GP_REG[6] = 15;
-	machine.GP_REG[7] = 16;
-
-	load_program(program_unit_test);
-#else
-	machine.RAM[MEM_START_PROGRAM] = 0xdc;
-	machine.RAM[MEM_START_PROGRAM + 1] = 0xba;
-	machine.RAM[MEM_START_PROGRAM + 2] = 0xfe;
-	machine.RAM[MEM_START_PROGRAM + 3] = 0xdc;
-	machine.RAM[8192] = 0xcb;
 	load_program(rom, MEM_START_ROM);
-#endif
+
+	if (run_test_prg)
+		load_program(program_unit_test_basic, MEM_START_PROGRAM);
 
 	while(!machine.cpu_regs.panic) {
 		instr_p = cpu_fetch_instruction();
@@ -428,23 +439,8 @@ int main(void)
 			usleep(100 * 1000);
 		}
 	}
-#if UNIT_TEST
-	assert(machine.GP_REG[0] == 238);
-	assert(machine.GP_REG[1] == 255);
-	assert(machine.GP_REG[2] == 11);
-	assert(machine.GP_REG[3] == 12);
-	assert(machine.GP_REG[4] == 160);
-	assert(machine.GP_REG[5] == 14);
-	assert(machine.GP_REG[6] == 170);
-	assert(machine.GP_REG[7] == 33);
-	assert(machine.GP_REG[9] == 12);
-	assert(machine.GP_REG[10] == 160);
-	assert(machine.GP_REG[12] == 186);
-	assert(machine.GP_REG[13] == 255);
-	assert(machine.GP_REG[14] == 12);
-
-	assert(machine.RAM[1] == machine.GP_REG[10]);
-#endif
+	dump_ram(MEM_START_PROGRAM,MEM_START_PROGRAM+16);
+	dump_regs();
 
 	return 0;
 }

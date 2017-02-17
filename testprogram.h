@@ -5,9 +5,27 @@
 #include "opcodes.h"
 #include "registers.h"
 
+uint32_t program_unit_test_basic[] = {
+		PROGRAM_MAGIC,
+		(1 << 0),					/* binary format version */
+		(1 << 0),					/* program start offset */
+		(1024 << 0),				/* program size  */
+		(nop << 0),
+		(setposxy << 0) | 10  << 8 | (1 << 20),
+		(screenout << 0) | ('T' << 8),
+		(setposxy << 0) | 11  << 8 | (1 << 20),
+		(screenout << 0) | ('S' << 8),
+		(setposxy << 0) | 12  << 8 | (1 << 20),
+		(screenout << 0) | ('T' << 8),
+		(nop << 0),
+		(halt << 0),
+};
 
 uint32_t program_unit_test[] = {
-		64,
+		PROGRAM_MAGIC,
+		(1 << 0),		/* binary format version */
+		(1 << 0),  		/* program start offset */
+		(1024 << 0),	/* program size  */
 		(nop << 0),
 		(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xff << 16),
 		(mov << 0) | (R4 << 8)  | OP_DST_REG | (0xa0 << 16),
@@ -23,7 +41,10 @@ uint32_t program_unit_test[] = {
 		(halt << 0),
 };
 uint32_t program_add_sub[] = {
-		64,
+		PROGRAM_MAGIC,
+		(1 << 0),		/* binary format version */
+		(1 << 0),		/* program start offset */
+		(1024 << 0),	/* program size  */
 		(nop << 0),
 		(add << 0) | (R1 << 8)  | OP_DST_REG | (64 << 16),
 		(add << 0) | (R0 << 8)  | OP_DST_REG | OP_SRC_REG | (3 << 16),
@@ -35,7 +56,10 @@ uint32_t program_add_sub[] = {
 
 
 uint32_t rom[] = {
-		1024,
+		PROGRAM_MAGIC,
+		(1 << 0),		/* binary format version */
+		(1 << 0),		/* program start offset */
+		(1024 << 0),	/* program size  */
 		(nop << 0),
 		(clrscr << 0),
 		(setposxy << 0) | 10  << 8 | (1 << 20),
@@ -70,15 +94,25 @@ uint32_t rom[] = {
 		(screenout << 0) | ('-' << 8),
 		(setposxy << 0) | 12  << 8 | (2 << 20),
 		(screenout << 0) | ('\'' << 8),
+
 		/* so the plan is to jump to program memory and start execute
 		 * ... if there is a program loaded there.
-		 * but until those details are worked out, we don't do anything */
-		(mov << 0) | (R1 << 8) | OP_SRC_MEM | OP_DST_REG | (8192 << 16),
-		//(cmp << 0) | (R1 << 8) | (0xcb << 16),
-		//(cmp << 0) | (R1 << 8) | OP_DST_REG | OP_SRC_MEM | (8192 << 16),
-		(mov << 0) | (R2 << 8) | OP_DST_REG | (0xcb << 16),
-		(cmp << 0) | (R1 << 8) | OP_DST_REG | OP_SRC_REG | (2 << 16),
-		(breq << 0) | (0x204 << 16), /* jump to start of ROM */
+		 * otherwise roll back to start of ROM code and wait for a program
+ 	     * to be loaded (TBD)
+ 	     */
+		(movi << 0) | (R1 << 8) | OP_SRC_MEM | OP_DST_REG | (MEM_START_PROGRAM << 16), 			/* mov r1, @mem_start_prog[0]+[2] */
+		(movi << 0) | (R2 << 8) | OP_SRC_MEM | OP_DST_REG | ((MEM_START_PROGRAM + 2) << 16), 	/* mov r2, @mem_start_prog[3]+[4] */
+
+		(mov << 0) | (R3 << 8) | OP_DST_REG | (PROGRAM_MAGIC << 16),							/* mov r3, prog magic low bits */
+		(mov << 0) | (R4 << 8) | OP_DST_REG | ((PROGRAM_MAGIC >> 16) << 16),					/* mov r4. prog magic high bits */
+
+		(cmp << 0) | (R1 << 8) | OP_DST_REG | OP_SRC_REG | (3 << 16),							/* r1 == r3? */
+		(brneq << 0) | ((MEM_START_ROM + 16) << 16),											/* not eq. jump to start of ROM */
+
+		(cmp << 0) | (R2 << 8) | OP_DST_REG | OP_SRC_REG | (4 << 16),							/* r2 == r4? */
+		(brneq << 0) | ((MEM_START_ROM + 16) << 16),											/* not eq. jump to start of ROM */
+		(jmp << 0) | ((MEM_START_PROGRAM + 16) << 8),											/* run program */
+
 		(nop << 0),
 		(halt << 0),
 };
