@@ -389,7 +389,7 @@ void init_screen(void) {
 }
 
 void load_program(uint32_t *prg, uint16_t addr) {
-	int prg_size = prg[3];
+	int prg_size = prg[PRG_SIZE_OFFSET];
 
 	/* todo: sanity check for prg_size */
 	memcpy(&machine.RAM[addr], prg, prg_size);

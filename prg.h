@@ -22,7 +22,15 @@
 #ifndef __PRG_H_
 #define __PRG_H_
 
+struct _prg_header {
+	uint32_t magic;
+	uint32_t reserved1;
+	uint32_t reserved2;
+	uint32_t prg_size;
+};
+
 #define PRG_MAGIC	0xdcbafedc
+#define PRG_SIZE_OFFSET	3
 #define PRG_HEADER_SIZE 16
 
 #endif /* __PRG_H_ */
