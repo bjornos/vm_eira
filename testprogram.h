@@ -4,12 +4,13 @@
 #include <stdint.h>
 #include "opcodes.h"
 #include "registers.h"
+#include "prg.h"
 
 uint32_t program_unit_test_basic[] = {
-	PROGRAM_MAGIC,
-	(1 << 0),					/* binary format version */
-	(1 << 0),					/* program start offset */
-	(1024 << 0),				/* program size  */
+	PRG_MAGIC,		/* magic */
+	(1 << 0),		/* reserved */
+	(1 << 0),		/* reserved */
+	(1024 << 0),	/* program size  */
 	(nop << 0),
 	(setposxy << 0) | 10  << 8 | (1 << 20),
 	(screenout << 0) | ('T' << 8),
@@ -18,13 +19,19 @@ uint32_t program_unit_test_basic[] = {
 	(setposxy << 0) | 12  << 8 | (1 << 20),
 	(screenout << 0) | ('T' << 8),
 	(nop << 0),
+
+	(movi << 0) | (R10 << 8) | OP_DST_REG | (10000 << 16),
+	(mov << 0) | (R11 << 8) | OP_DST_REG | (55 << 16),
+	(mov << 0) | (R10 << 8) | OP_SRC_REG | OP_DST_MEM | (8192 << 16),
+	(mov << 0) | (R11 << 8) | OP_SRC_REG | OP_DST_MEM | (8194 << 16),
+
 	(halt << 0),
 };
 
 uint32_t program_unit_test[] = {
-	PROGRAM_MAGIC,
-	(1 << 0),		/* binary format version */
-	(1 << 0),  		/* program start offset */
+	PRG_MAGIC,		/* magic */
+	(1 << 0),		/* reserved */
+	(1 << 0),		/* reserved */
 	(1024 << 0),	/* program size  */
 	(nop << 0),
 	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xff << 16),
@@ -42,9 +49,9 @@ uint32_t program_unit_test[] = {
 };
 
 uint32_t program_add_sub[] = {
-	PROGRAM_MAGIC,
-	(1 << 0),		/* binary format version */
-	(1 << 0),		/* program start offset */
+	PRG_MAGIC,		/* magic */
+	(1 << 0),		/* reserved */
+	(1 << 0),		/* reserved */
 	(1024 << 0),	/* program size  */
 	(nop << 0),
 	(add << 0) | (R1 << 8)  | OP_DST_REG | (64 << 16),
@@ -56,9 +63,9 @@ uint32_t program_add_sub[] = {
 };
 
 uint32_t rom[] = {
-	PROGRAM_MAGIC,
-	(1 << 0),		/* binary format version */
-	(1 << 0),		/* program start offset */
+	PRG_MAGIC,		/* magic */
+	(1 << 0),		/* reserved */
+	(1 << 0),		/* reserved */
 	(1024 << 0),	/* program size  */
 	(nop << 0),
 	(clrscr << 0),
@@ -96,18 +103,18 @@ uint32_t rom[] = {
 	 * otherwise roll back to start of ROM code and wait for a program
      * to be loaded (TBD)
      */
-	(movi << 0) | (R1 << 8) | OP_SRC_MEM | OP_DST_REG | (MEM_START_PROGRAM << 16), 			/* mov r1, @mem_start_prog[0]+[2] */
-	(movi << 0) | (R2 << 8) | OP_SRC_MEM | OP_DST_REG | ((MEM_START_PROGRAM + 2) << 16), 	/* mov r2, @mem_start_prog[3]+[4] */
+	(movi << 0) | (R1 << 8) | OP_SRC_MEM | OP_DST_REG | (MEM_START_PRG << 16), 			/* mov r1, @mem_start_prog[0]+[2] */
+	(movi << 0) | (R2 << 8) | OP_SRC_MEM | OP_DST_REG | ((MEM_START_PRG + 2) << 16), 	/* mov r2, @mem_start_prog[3]+[4] */
 
-	(mov << 0) | (R3 << 8) | OP_DST_REG | (PROGRAM_MAGIC << 16),							/* mov r3, prog magic low bits */
-	(mov << 0) | (R4 << 8) | OP_DST_REG | ((PROGRAM_MAGIC >> 16) << 16),					/* mov r4. prog magic high bits */
+	(mov << 0) | (R3 << 8) | OP_DST_REG | (PRG_MAGIC << 16),							/* mov r3, prog magic low bits */
+	(mov << 0) | (R4 << 8) | OP_DST_REG | ((PRG_MAGIC >> 16) << 16),					/* mov r4. prog magic high bits */
 
-	(cmp << 0) | (R1 << 8) | OP_DST_REG | OP_SRC_REG | (3 << 16),							/* r1 == r3? */
-	(brneq << 0) | ((MEM_START_ROM + 16) << 16),											/* not eq. jump to start of ROM */
+	(cmp << 0) | (R1 << 8) | OP_DST_REG | OP_SRC_REG | (3 << 16),						/* r1 == r3? */
+	(brneq << 0) | ((MEM_START_ROM + PRG_HEADER_SIZE) << 16),							/* not eq. jump to start of ROM */
 
-	(cmp << 0) | (R2 << 8) | OP_DST_REG | OP_SRC_REG | (4 << 16),							/* r2 == r4? */
-	(brneq << 0) | ((MEM_START_ROM + 16) << 16),											/* not eq. jump to start of ROM */
-	(jmp << 0) | ((MEM_START_PROGRAM + 16) << 8),											/* run program */
+	(cmp << 0) | (R2 << 8) | OP_DST_REG | OP_SRC_REG | (4 << 16),						/* r2 == r4? */
+	(brneq << 0) | ((MEM_START_ROM + PRG_HEADER_SIZE) << 16),							/* not eq. jump to start of ROM */
+	(jmp << 0) | ((MEM_START_PRG + PRG_HEADER_SIZE) << 8),								/* run program */
 
 	(nop << 0),
 	(halt << 0),

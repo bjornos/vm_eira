@@ -1,10 +1,8 @@
 #ifndef OPCODES_H_
 #define OPCODES_H_
 
-#define PROGRAM_MAGIC 0xdcbafedc
-
 #define MEM_START_SCREEN	0x7fff
-#define MEM_START_PROGRAM	0x1000
+#define MEM_START_PRG		0x1000
 #define MEM_START_ROM		0x200
 
 /**

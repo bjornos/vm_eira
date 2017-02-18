@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include "opcodes.h"
 #include "testprogram.h"
+#include "prg.h"
+
 #undef NDEBUG
 #include <assert.h>
 
@@ -351,7 +353,7 @@ void reset_cpu(void) {
 	machine.cpu_regs.panic = 0;
 	machine.cpu_regs.cr = COND_UNDEFINED;
 
-	machine.cpu_regs.pc = MEM_START_ROM + 16;
+	machine.cpu_regs.pc = MEM_START_ROM + PRG_HEADER_SIZE;
 }
 
 void init_screen(void) {
@@ -425,7 +427,7 @@ int main(int argc,char *argv[])
 	load_program(rom, MEM_START_ROM);
 
 	if (run_test_prg)
-		load_program(program_unit_test_basic, MEM_START_PROGRAM);
+		load_program(program_unit_test_basic, MEM_START_PRG);
 
 	while(!machine.cpu_regs.panic) {
 		instr_p = cpu_fetch_instruction();
@@ -439,8 +441,9 @@ int main(int argc,char *argv[])
 			usleep(100 * 1000);
 		}
 	}
-	dump_ram(MEM_START_PROGRAM,MEM_START_PROGRAM+16);
+	dump_ram(MEM_START_PRG,MEM_START_PRG + PRG_HEADER_SIZE);
 	dump_regs();
+	dump_ram(8192,8192+8);
 
 	return 0;
 }
