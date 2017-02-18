@@ -33,7 +33,7 @@
  * 0           8                               31
  *                         reserved
  */
-#define halt	0x00
+#define halt		0x00
 
 /**
  * instruction: nop
@@ -134,7 +134,7 @@
  *  movi @128, r10 - ram[128] = 0 (r10 & 0xff), ram[129] = 32 (r10 >> 16)
  *
  */
-#define movi	0x05
+#define movi		0x05
 
 /**
  * instruction: jmp
@@ -175,7 +175,7 @@
  * 0           8           16
  *    instr       reserved           addr
 */
-#define breq	0x12
+#define breq		0x12
 
 /**
  * instruction: branch not equal
@@ -188,7 +188,7 @@
  * 0           8           16
  *    instr       reserved           addr
 */
-#define brneq	0x13
+#define brneq		0x13
 
 
 
@@ -199,7 +199,7 @@
  */
 
 /* no args */
-#define clrscr	0xf0
+#define clrscr		0xf0
 
 /*
  * instruction: setposxy

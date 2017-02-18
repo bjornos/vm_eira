@@ -82,10 +82,10 @@ struct _cpu_regs {
 };
 
 int screen_modes[] = {
-		40  * 12,
-		80  * 25,
-		320 * 240,
-		640 * 480,
+	40  * 12,
+	80  * 25,
+	320 * 240,
+	640 * 480,
 };
 
 struct _screen_adapter {
@@ -247,7 +247,7 @@ void screen_retrace(void)
 
 	machine.screen_adapter.screen_mem = machine.RAM + MEM_START_SCREEN;
 	screen_addr =	/* FIXME: respect screen mode */
-			(machine.screen_adapter.y * 40) + machine.screen_adapter.x;
+		(machine.screen_adapter.y * 40) + machine.screen_adapter.x;
 	machine.screen_adapter.screen_mem = machine.RAM + MEM_START_SCREEN + screen_addr;
 
 	printf("%c",(char)*machine.screen_adapter.screen_mem & 0xff);
@@ -270,11 +270,11 @@ void screen_request(uint32_t *instr, int request)
 			DBG(printf("x:%d y:%d \n",machine.screen_adapter.x ,machine.screen_adapter.y));
 			break;
 		case screen_setc:
-			screen_addr =		/* FIXME: screen mode */
-					(machine.screen_adapter.y * 40) + machine.screen_adapter.x;
+			screen_addr =	/* FIXME: screen mode */
+				(machine.screen_adapter.y * 40) + machine.screen_adapter.x;
 			machine.screen_adapter.c = (*instr >> 8) & 0xff;
 			machine.screen_adapter.screen_mem =
-					machine.RAM + MEM_START_SCREEN + screen_addr;
+				machine.RAM + MEM_START_SCREEN + screen_addr;
 			*machine.screen_adapter.screen_mem = machine.screen_adapter.c;
 			machine.screen_adapter.refresh = 1;
 			DBG(printf("c:%c \n", (char)machine.screen_adapter.c));
@@ -299,67 +299,67 @@ void decode_instruction(uint32_t *instr)
 
 	switch(opcode) {
 		case nop: DBG(printf("nop\n"));
-				break;
+			break;
 		case halt: DBG(printf("halt\n"));
-				machine.cpu_regs.panic = 1;
-				break;
+			machine.cpu_regs.panic = 1;
+			break;
 		case mov:
-				src = mnemonic(instr, &dst, SIZE_BYTE, "mov");
-				if (!machine.cpu_regs.exception)
-					*dst = src;
-				break;
+			src = mnemonic(instr, &dst, SIZE_BYTE, "mov");
+			if (!machine.cpu_regs.exception)
+				*dst = src;
+			break;
 		case movi:
-				src = mnemonic(instr, &dst, SIZE_INT,"movi");
-				if (!machine.cpu_regs.exception)
-					*dst = src;
-				break;
+			src = mnemonic(instr, &dst, SIZE_INT,"movi");
+			if (!machine.cpu_regs.exception)
+				*dst = src;
+			break;
 		case add:
-				src = mnemonic(instr, &dst,SIZE_BYTE, "add");
-				if (!machine.cpu_regs.exception)
-					*dst += src;
-				break;
+			src = mnemonic(instr, &dst,SIZE_BYTE, "add");
+			if (!machine.cpu_regs.exception)
+				*dst += src;
+			break;
 		case sub: DBG(printf("sub\n"));
-				src = mnemonic(instr, &dst,SIZE_BYTE,"sub");
-				if (!machine.cpu_regs.exception)
-					*dst -= src;
-				break;
+			src = mnemonic(instr, &dst,SIZE_BYTE,"sub");
+			if (!machine.cpu_regs.exception)
+				*dst -= src;
+			break;
 		case jmp: DBG(printf("jmp "));
-				machine.cpu_regs.pc = (*instr >> 8) - 4; /* compensate for pc++ */
-				DBG(printf("%ld\n", machine.cpu_regs.pc));
-				break;
+			machine.cpu_regs.pc = (*instr >> 8) - 4; /* compensate for pc++ */
+			DBG(printf("%ld\n", machine.cpu_regs.pc));
+			break;
 		case cmp: DBG(printf("cmp "));
-				machine.cpu_regs.cr &= COND_UNDEFINED;
-				src = mnemonic(instr, &dst, SIZE_INT, "cmp");
-				compare(src, *dst);
-				DBG(printf("cr: 0x%x\n", machine.cpu_regs.cr));
-				break;
+			machine.cpu_regs.cr &= COND_UNDEFINED;
+			src = mnemonic(instr, &dst, SIZE_INT, "cmp");
+			compare(src, *dst);
+			DBG(printf("cr: 0x%x\n", machine.cpu_regs.cr));
+			break;
 		case breq: DBG(printf("breq "));
-				if (machine.cpu_regs.cr &= COND_EQ) {// todo: make a jump func
-					machine.cpu_regs.pc = (*instr >> 16);
-					printf("jump to %ld \n",machine.cpu_regs.pc);
-					machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
-				}
-				break;
+			if (machine.cpu_regs.cr &= COND_EQ) {// todo: make a jump func
+				machine.cpu_regs.pc = (*instr >> 16);
+				printf("jump to %ld \n",machine.cpu_regs.pc);
+				machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
+			}
+			break;
 		case brneq: DBG(printf("brneq "));
-				if (machine.cpu_regs.cr &= COND_NEQ) {// todo: make a jump func
-					printf("pc = %ld \n",machine.cpu_regs.pc);
-					machine.cpu_regs.pc = (*instr >> 16);
-					printf("jump to %ld \n",machine.cpu_regs.pc);
-					machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
-					//exit(0);
-				}
-				break;
+			if (machine.cpu_regs.cr &= COND_NEQ) {// todo: make a jump func
+				printf("pc = %ld \n",machine.cpu_regs.pc);
+				machine.cpu_regs.pc = (*instr >> 16);
+				printf("jump to %ld \n",machine.cpu_regs.pc);
+				machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
+				//exit(0);
+			}
+			break;
 		case clrscr: DBG(printf("clrscr\n"));
-				clear();
-				break;
+			clear();
+			break;
 		case setposxy: DBG(printf("setposxy\n"));
-				screen_request(instr,screen_setxy);
-				break;
+			screen_request(instr,screen_setxy);
+			break;
 		case screenout: DBG(printf("outscreen\n"));
-				screen_request(instr,screen_setc);
-				break;
+			screen_request(instr,screen_setc);
+			break;
 		default: machine.cpu_regs.exception = EXC_INSTR;
-				break;
+			break;
 	}
 }
 
@@ -401,7 +401,7 @@ void cpu_exception(long pc) {
 	switch(machine.cpu_regs.exception) {
 	case EXC_INSTR:
 			printf("illegal instruction 0x%X ",
-					machine.RAM[pc]);
+				machine.RAM[pc]);
 			break;
 	case EXC_MEM:
 			printf("cannot access memory ");
