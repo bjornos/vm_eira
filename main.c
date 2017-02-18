@@ -123,7 +123,7 @@ void dump_regs(void)
 		printf("\n");
 	}
 	printf("\n");
-	printf("CR: %ld PC: %d\n",machine.cpu_regs.cr,machine.cpu_regs.pc);
+	printf("CR: %d PC: %ld\n",machine.cpu_regs.cr,machine.cpu_regs.pc);
 }
 
 
@@ -190,7 +190,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 		if (opsize == SIZE_INT)
 			*(dst) = (uint16_t *)machine.RAM + local_dst; // FIXME: verify
 		else
-			*(dst) = (uint8_t *)machine.RAM + local_dst;
+			*(dst) = (void *)machine.RAM + local_dst;
 
 		src = machine.GP_REG[local_src] & 0xff;
 	}
