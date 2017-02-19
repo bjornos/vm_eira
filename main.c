@@ -391,8 +391,10 @@ void init_screen(void) {
 void load_program(uint32_t *prg, uint16_t addr) {
 	int prg_size = prg[PRG_SIZE_OFFSET];
 
-	/* todo: sanity check for prg_size */
-	memcpy(&machine.RAM[addr], prg, prg_size);
+	if (prg_size > (RAM_SIZE - MEM_START_PRG))
+		machine.cpu_regs.exception = EXC_PRG;
+	else
+		memcpy(&machine.RAM[addr], prg, prg_size);
 }
 
 void cpu_exception(long pc) {
