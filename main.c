@@ -25,6 +25,7 @@
 #include "opcodes.h"
 #include "testprogram.h"
 #include "prg.h"
+#include "rom.h"
 
 /* fixme: make cross platform compatible */
 #define clear() printf("\033[H\033[J")
