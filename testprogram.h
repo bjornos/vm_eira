@@ -27,12 +27,28 @@
 #include "registers.h"
 #include "prg.h"
 
-uint32_t program_unit_test_basic[] = {
+#undef NDEBUG
+#include <assert.h>
+
+void test_result(uint16_t *GP_REG, uint8_t *RAM) {
+	assert(*(GP_REG + 1) == 0xe4);
+	assert(*(GP_REG + 6) == *(GP_REG + 1));
+	assert(*(RAM + 8192) == 0xaa);
+	assert(*(GP_REG + 0) == 0x44);
+	assert(*(RAM + 8194) == 0x44);
+	assert(*(GP_REG + 3) == 0x44);
+	assert(*(GP_REG + 10) == 196);
+	assert(*(GP_REG + 11) == 200);
+	assert(*(RAM + 8196) == 0x12);
+}
+
+uint32_t program_regression_test[] = {
 	PRG_MAGIC,		/* magic */
 	(1 << 0),		/* reserved */
 	(1 << 0),		/* reserved */
-	(1024 << 0),	/* program size  */
+	(1024 << 0),		/* program size  */
 	(nop << 0),
+	(clrscr << 0),
 	(setposxy << 0) | 10  << 8 | (1 << 20),
 	(screenout << 0) | ('T' << 8),
 	(setposxy << 0) | 11  << 8 | (1 << 20),
@@ -41,47 +57,34 @@ uint32_t program_unit_test_basic[] = {
 	(screenout << 0) | ('T' << 8),
 	(nop << 0),
 
-	(movi << 0) | (R10 << 8) | OP_DST_REG | (10000 << 16),
-	(mov << 0) | (R11 << 8) | OP_DST_REG | (55 << 16),
-	(mov << 0) | (R10 << 8) | OP_SRC_REG | OP_DST_MEM | (8192 << 16),
-	(mov << 0) | (R11 << 8) | OP_SRC_REG | OP_DST_MEM | (8194 << 16),
+	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xe4 << 16), 			/* r1 = 0xe4 */
+	(mov << 0) | (R6 << 8) | OP_SRC_REG | OP_DST_REG | (R1 << 16),		/* r10 = r1 */
+	(mov << 0) | (R0 << 8)  | OP_DST_REG | (0xaa << 16),
+	(mov << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_MEM | (8192 << 16), 	/* RAM[8192] = 0xaa */
+
+	(mov << 0) | (R0 << 8)  | OP_DST_REG | (0x44 << 16),			/* r0 = 0x44 */
+	(mov << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_MEM | (8194 << 16),	/* RAM[8194] = 0x44*/
+	(mov << 0) | (R3 << 8) | OP_SRC_MEM | OP_DST_REG | (8194 << 16),	/* r3 = 0x44 */
+
+
+	(mov << 0) | (R10 << 8)  | OP_DST_REG | (0x00 << 16), 			/* r10 = 0x00*/
+	(mov << 0) | (R11 << 8)  | OP_DST_REG | (0x00 << 16), 			/* r11 = 0x00*/
+	(mov << 0) | (R12 << 8)  | OP_DST_REG | (0x02 << 16), 			/* r12 = 0x02*/
+
+	(add << 0) | (R10 << 8)  | OP_DST_REG | (198 << 16),			/* r10 = r10 + 198 (0 + 198)*/
+	(add << 0) | (R11 << 8)  | OP_DST_REG | OP_SRC_REG | (10 << 16),	/* r11 = r11 + r10 (0 + 198)*/
+	(add << 0) | (R11 << 8)  | OP_DST_REG | OP_SRC_REG | (12 << 16),	/* r11 = r11 + r12 (198 + 2) */
+
+	(mov << 0) | (R13 << 8)  | OP_DST_REG | (0x10 << 16),
+	(mov << 0) | (R13 << 8) | OP_SRC_REG | OP_DST_MEM | (8196 << 16), 	/* RAM[8196] = 0x10 */
+
+	(add << 0) | (R12 << 8)  | OP_DST_MEM | OP_SRC_REG | (8196 << 16),	/* RAM[8196] = RAM[8196] + r12 (16 + 2)*/
+
+	(sub << 0) | (10 << 8)  | OP_DST_REG | OP_SRC_REG | (12 << 16),		/* r10 = r10 - r12 (198 - 2) */
 
 	(halt << 0),
 };
 
-uint32_t program_unit_test[] = {
-	PRG_MAGIC,		/* magic */
-	(1 << 0),		/* reserved */
-	(1 << 0),		/* reserved */
-	(1024 << 0),	/* program size  */
-	(nop << 0),
-	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xff << 16),
-	(mov << 0) | (R4 << 8)  | OP_DST_REG | (0xa0 << 16),
-	(mov << 0) | (R7 << 8)  | OP_DST_REG | (0x21 << 16),
-	(mov << 0) | (R10 << 8) | OP_SRC_REG | OP_DST_REG | (R4 << 16),
-	(mov << 0) | (R14 << 8) | OP_SRC_REG | OP_DST_REG | (R3 << 16),
-	(mov << 0) | (R12 << 8) | OP_SRC_MEM | OP_DST_REG | (58 << 16),
-	(mov << 0) | (R13 << 8) | OP_SRC_REG | OP_DST_REG | (1 << 16),
-	(mov << 0) | (R9 << 8) | OP_SRC_REG | OP_DST_REG | (3 << 16),
-	(mov << 0) | (R6 << 8) | OP_SRC_MEM | OP_DST_REG | (59 << 16),
-	(mov << 0) | (R0 << 8) | OP_SRC_MEM | OP_DST_REG | (61 << 16),
-	(mov << 0) | (R10 << 8) | OP_SRC_REG | OP_DST_MEM | (1 << 16),
-	(halt << 0),
-};
-
-uint32_t program_add_sub[] = {
-	PRG_MAGIC,		/* magic */
-	(1 << 0),		/* reserved */
-	(1 << 0),		/* reserved */
-	(1024 << 0),	/* program size  */
-	(nop << 0),
-	(add << 0) | (R1 << 8)  | OP_DST_REG | (64 << 16),
-	(add << 0) | (R0 << 8)  | OP_DST_REG | OP_SRC_REG | (3 << 16),
-	(add << 0) | (R7 << 8)  | OP_DST_REG | OP_SRC_REG | (6 << 16),
-	(add << 0) | (R2 << 8)  | OP_DST_MEM | OP_SRC_REG | (61 << 16),
-	(sub << 0) | (R1 << 8)  | OP_DST_REG | OP_SRC_REG | (0 << 16),
-	(halt << 0),
-};
 
 uint32_t rom[] = {
 	PRG_MAGIC,		/* magic */

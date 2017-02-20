@@ -26,11 +26,6 @@
 #include "testprogram.h"
 #include "prg.h"
 
-#undef NDEBUG
-#include <assert.h>
-
-#define UNIT_TEST 0
-
 /* fixme: make cross platform compatible */
 #define clear() printf("\033[H\033[J")
 #define gotoxy(x,y) printf("\033[%d;%dH", (y), (x))
@@ -450,7 +445,7 @@ int main(int argc,char *argv[])
 	load_program(rom, MEM_START_ROM);
 
 	if (run_test_prg)
-		load_program(program_unit_test_basic, MEM_START_PRG);
+		load_program(program_regression_test, MEM_START_PRG);
 
 	while(!machine.cpu_regs.panic) {
 		instr_p = cpu_fetch_instruction();
@@ -467,6 +462,11 @@ int main(int argc,char *argv[])
 	dump_ram(MEM_START_PRG,MEM_START_PRG + PRG_HEADER_SIZE);
 	dump_regs();
 	dump_ram(8192,8192+8);
+
+	if (run_test_prg) {
+		test_result(machine.GP_REG, machine.RAM);
+		printf("\n%s: all tests OK.\n",__func__);
+	}
 
 	return 0;
 }
