@@ -26,6 +26,7 @@
 #include "testprogram.h"
 #include "prg.h"
 #include "rom.h"
+#include "utils.h"
 
 /* fixme: make cross platform compatible */
 #define clear() printf("\033[H\033[J")
@@ -100,50 +101,6 @@ static struct _machine {
 	struct _screen_adapter screen_adapter;
 } machine;
 
-
-void dump_ram(int from, int to)
-{
-	int r,v;
-	int p=0;
-	int rows=0;
-	int grid = 8;
-	int range;
-
-	printf("RAM  %d -> %d:\n----\n", from, to);
-
-	/* round up range to nearest grid size */
-	range = ((to - from) + grid)  & ~(grid -1);
-
-	for (r=0; r<(range / grid); r++) {
-		printf("0x%.2x:\t",rows+from);
-		for (v=0; v<grid; v++) {
-			assert(from + p <= RAM_SIZE);
-			printf("%d\t", machine.RAM[from + p] & 0xff);
-			p++;
-		}
-		rows +=grid;
-		printf("\n");
-	}
-	printf("\n");
-}
-
-void dump_regs(void)
-{
-	int i,o;
-	int grid = 4;
-	int r = 0;
-
-	printf("General Purpose Registers:\n--------------------------\n");
-	for (i=0; i <= (GP_REG_MAX / grid); i++) {
-		for (o=0; o < grid; o++) {
-			printf("R%d:\t%d\t",r,machine.GP_REG[r]);
-			r++;
-		}
-		printf("\n");
-	}
-	printf("\n");
-	printf("CR: %d PC: %ld\n",machine.cpu_regs.cr,machine.cpu_regs.pc);
-}
 
 
 
@@ -460,9 +417,9 @@ int main(int argc,char *argv[])
 			usleep(100 * 1000);
 		}
 	}
-	dump_ram(MEM_START_PRG,MEM_START_PRG + PRG_HEADER_SIZE);
-	dump_regs();
-	dump_ram(8192,8192+8);
+
+	dump_ram(machine.RAM, MEM_START_PRG,MEM_START_PRG + PRG_HEADER_SIZE);
+	dump_regs(machine.GP_REG);
 
 	if (run_test_prg) {
 		test_result(machine.GP_REG, machine.RAM);
