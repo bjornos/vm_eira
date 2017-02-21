@@ -36,8 +36,6 @@
 #define CPU_VERSION	0x1
 
 #define RAM_SIZE	0xffff
-#define BYTE_SIZE 0
-#define INT_SIZE
 
 enum op_size {
 	SIZE_BYTE,
