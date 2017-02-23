@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <argp.h>
+
 #include "opcodes.h"
 #include "testprogram.h"
 #include "prg.h"
@@ -100,7 +102,37 @@ static struct _machine {
 } machine;
 
 
+static char* doc = "";
+static char* args_doc = "";
 
+typedef struct {
+  int debug;
+  int regression;
+} args_t;
+
+static struct argp_option opts[] = {
+	{"debug", 'd', 0, OPTION_ARG_OPTIONAL, "Enable debug"},
+	{"regression", 'r', "test", OPTION_ARG_OPTIONAL, "Run regression test program"},
+	{0}
+};
+
+error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+	args_t* args = state->input;
+
+	switch (key) {
+		case 'd':
+			args->debug = 1;
+			break;
+		case 'r':
+			args->regression = 1;
+			break;
+		default:
+			return ARGP_ERR_UNKNOWN;
+	}
+
+	return 0;
+}
 
 /* fixme: func name */
 uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_instr[])
@@ -389,18 +421,22 @@ __inline static long cpu_fetch_instruction(void){
 
 int main(int argc,char *argv[])
 {
+	args_t args;
 	long instr_p;
-	int run_test_prg = 0;
+	int *run_test_prg = &args.regression;
+	int *debug = &args.debug;
+	struct argp argp = {opts, parse_opt, args_doc, doc};
 
-	if ((argc == 2) && (strcmp(argv[1],"--test") == 0))
-		run_test_prg = 1;
+	args.debug = args.regression = 0;
+
+	argp_parse(&argp,argc,argv,0,0,&args);
 
 	reset_cpu();
 	init_screen();
 
 	load_program(rom, MEM_START_ROM);
 
-	if (run_test_prg)
+	if (*run_test_prg)
 		load_program(program_regression_test, MEM_START_PRG);
 
 	while(!machine.cpu_regs.panic) {
@@ -416,10 +452,12 @@ int main(int argc,char *argv[])
 		}
 	}
 
-	dump_ram(machine.RAM, MEM_START_PRG,MEM_START_PRG + PRG_HEADER_SIZE);
-	dump_regs(machine.GP_REG);
+	if (*debug) {
+		dump_ram(machine.RAM, MEM_START_PRG,MEM_START_PRG + PRG_HEADER_SIZE);
+		dump_regs(machine.GP_REG);
+	}
 
-	if (run_test_prg) {
+	if (*run_test_prg) {
 		test_result(machine.GP_REG, machine.RAM);
 		printf("\n%s: all tests OK.\n",__func__);
 	}
