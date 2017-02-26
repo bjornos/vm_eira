@@ -25,19 +25,16 @@
 #include <argp.h>
 
 #include "opcodes.h"
+#include "display.h"
+#include "memory.h"
 #include "testprogram.h"
 #include "prg.h"
 #include "rom.h"
 #include "utils.h"
 
-/* fixme: make cross platform compatible */
-#define clear() printf("\033[H\033[J")
-#define gotoxy(x,y) printf("\033[%d;%dH", (y), (x))
 
 #define DBG(x)
 #define CPU_VERSION	0x1
-
-#define RAM_SIZE	0xffff
 
 enum op_size {
 	SIZE_BYTE,
@@ -54,20 +51,6 @@ enum conditions {
 	COND_UNDEFINED = 64,
 };
 
-enum exceptions {
-	EXC_INSTR,
-	EXC_MEM,
-	EXC_REG,
-	EXC_PRG,
-};
-
-enum screen_adapter_capabilities {
-	screen_setxy,
-	screen_getxy,
-	screen_setc,
-	screen_getc,
-	screen_clr,
-};
 
 
 struct _cpu_regs {
@@ -78,27 +61,12 @@ struct _cpu_regs {
 	int panic;
 };
 
-int screen_modes[] = {
-	40  * 12,
-	80  * 25,
-	320 * 240,
-	640 * 480,
-};
-
-struct _screen_adapter {
-	uint8_t *screen_mem;
-	uint16_t x;
-	uint16_t y;
-	char c;
-	int refresh;
-	int mode;
-};
 
 static struct _machine {
 	uint8_t RAM[RAM_SIZE];
 	uint16_t GP_REG[16]; /* General Purpose Registers - fixme: move into cpu regs */
 	struct _cpu_regs cpu_regs;
-	struct _screen_adapter screen_adapter;
+	struct _display_adapter display;
 } machine;
 
 
@@ -141,7 +109,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 	uint16_t local_dst;
 	uint16_t src;
 
-	printf("%s %s --- ",__func__, dbg_instr);
+	DBG(printf("%s %s --- ",__func__, dbg_instr));
 
 	/* value destination general purpose register */
 	if (*instr & OP_DST_REG) {
@@ -173,7 +141,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 			} else
 				src = machine.RAM[local_src];
 
-			printf("RAM SRC = 0x%x  opsize=%d\n",src,opsize);
+			DBG(printf("RAM SRC = 0x%x  opsize=%d\n",src,opsize));
 			goto out;
 		}
 		/* immediate value */
@@ -209,7 +177,7 @@ void compare(uint16_t t1, uint16_t t2)
 {
 	int d = t2 - t1;
 
-	printf("%s --- ",__func__);
+	DBG(printf("%s --- ",__func__));
 
 	if (d == 0)
 		machine.cpu_regs.cr = COND_EQ | COND_ZERO;
@@ -218,54 +186,10 @@ void compare(uint16_t t1, uint16_t t2)
 	if (d < 0)
 		machine.cpu_regs.cr = COND_LE | COND_NEQ;
 
-	printf("t1:%d t2:%d d:%d desc: %d\n",t1, t2,d,machine.cpu_regs.cr);
+	DBG(printf("t1:%d t2:%d d:%d desc: %d\n",t1, t2,d,machine.cpu_regs.cr));
 }
 
 
-void screen_retrace(void)
-{
-	int screen_addr;
-
-	gotoxy(machine.screen_adapter.x,machine.screen_adapter.y);
-
-	machine.screen_adapter.screen_mem = machine.RAM + MEM_START_SCREEN;
-	screen_addr =	/* FIXME: respect screen mode */
-		(machine.screen_adapter.y * 40) + machine.screen_adapter.x;
-	machine.screen_adapter.screen_mem = machine.RAM + MEM_START_SCREEN + screen_addr;
-
-	printf("%c",(char)*machine.screen_adapter.screen_mem & 0xff);
-
-	machine.screen_adapter.refresh = 0;
-}
-
-void screen_request(uint32_t *instr, int request)
-{
-	int screen_addr = 0;
-
-	DBG(printf("%s 0x%x --- ",__func__,request));
-
-	switch(request) {
-		case screen_setxy:
-			machine.screen_adapter.x = (*instr >> 8) & 0xfff;
-			machine.screen_adapter.y = (*instr >> 20) & 0xfff;
-			gotoxy(5,20);
-			printf("x:%d y:%d \n",machine.screen_adapter.x ,machine.screen_adapter.y);
-			DBG(printf("x:%d y:%d \n",machine.screen_adapter.x ,machine.screen_adapter.y));
-			break;
-		case screen_setc:
-			screen_addr =	/* FIXME: screen mode */
-				(machine.screen_adapter.y * 40) + machine.screen_adapter.x;
-			machine.screen_adapter.c = (*instr >> 8) & 0xff;
-			machine.screen_adapter.screen_mem =
-				machine.RAM + MEM_START_SCREEN + screen_addr;
-			*machine.screen_adapter.screen_mem = machine.screen_adapter.c;
-			machine.screen_adapter.refresh = 1;
-			DBG(printf("c:%c \n", (char)machine.screen_adapter.c));
-			break;
-		default:
-			machine.cpu_regs.exception = 2;
-	}
-}
 
 void decode_instruction(uint32_t *instr)
 {
@@ -319,27 +243,27 @@ void decode_instruction(uint32_t *instr)
 		case breq: DBG(printf("breq "));
 			if (machine.cpu_regs.cr &= COND_EQ) {// todo: make a jump func
 				machine.cpu_regs.pc = (*instr >> 16);
-				printf("jump to %ld \n",machine.cpu_regs.pc);
+				DBG(printf("jump to %ld \n",machine.cpu_regs.pc));
 				machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
 			}
 			break;
 		case brneq: DBG(printf("brneq "));
 			if (machine.cpu_regs.cr &= COND_NEQ) {// todo: make a jump func
-				printf("pc = %ld \n",machine.cpu_regs.pc);
+				DBG(printf("pc = %ld \n",machine.cpu_regs.pc));
 				machine.cpu_regs.pc = (*instr >> 16);
-				printf("jump to %ld \n",machine.cpu_regs.pc);
+				//printf("jump to %ld \n",machine.cpu_regs.pc);
 				machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
 				//exit(0);
 			}
 			break;
 		case clrscr: DBG(printf("clrscr\n"));
-			clear();
+			display_request(&machine.display, instr, display_clr, machine.RAM);
 			break;
 		case setposxy: DBG(printf("setposxy\n"));
-			screen_request(instr,screen_setxy);
+			display_request(&machine.display, instr, display_setxy, machine.RAM);
 			break;
-		case screenout: DBG(printf("outscreen\n"));
-			screen_request(instr,screen_setc);
+		case putchar: DBG(printf("putchar\n"));
+			display_request(&machine.display, instr, display_setc, machine.RAM);
 			break;
 		default: machine.cpu_regs.exception = EXC_INSTR;
 			break;
@@ -360,16 +284,6 @@ void reset_cpu(void) {
 	machine.cpu_regs.pc = MEM_START_ROM + PRG_HEADER_SIZE;
 }
 
-void init_screen(void) {
-	machine.screen_adapter.x = 0;
-	machine.screen_adapter.y = 0;
-	machine.screen_adapter.c = '\0';
-	machine.screen_adapter.mode = 0;
-
-	machine.screen_adapter.screen_mem = machine.RAM + MEM_START_SCREEN;
-	memset(machine.screen_adapter.screen_mem, 0x00, screen_modes[machine.screen_adapter.mode]);
-	machine.screen_adapter.refresh = 0;
-}
 
 void load_program(uint32_t *prg, uint16_t addr) {
 	int prg_size = prg[PRG_SIZE_OFFSET];
@@ -432,7 +346,7 @@ int main(int argc,char *argv[])
 	argp_parse(&argp,argc,argv,0,0,&args);
 
 	reset_cpu();
-	init_screen();
+	display_init(&machine.display, machine.RAM);
 
 	load_program(rom, MEM_START_ROM);
 
@@ -446,14 +360,14 @@ int main(int argc,char *argv[])
 		if (machine.cpu_regs.exception)
 			cpu_exception(instr_p);
 
-		if (machine.screen_adapter.refresh) {
-			screen_retrace();
+		if (machine.display.refresh) {
+			display_retrace(&machine.display, machine.RAM);
 			usleep(100 * 1000);
 		}
 	}
 
 	if (*debug) {
-		dump_ram(machine.RAM, MEM_START_PRG,MEM_START_PRG + PRG_HEADER_SIZE);
+		dump_ram(machine.RAM, MEM_START_DISPLAY,MEM_START_DISPLAY + 64);
 		dump_regs(machine.GP_REG);
 	}
 

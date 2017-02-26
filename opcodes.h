@@ -22,9 +22,15 @@
 #ifndef OPCODES_H_
 #define OPCODES_H_
 
-#define MEM_START_SCREEN	0x7fff
-#define MEM_START_PRG		0x1000
-#define MEM_START_ROM		0x200
+/* does not really belong here. move elsewhere later. */
+enum exceptions {
+	EXC_NONE,
+	EXC_INSTR,
+	EXC_MEM,
+	EXC_REG,
+	EXC_PRG,
+	EXC_DISP,
+};
 
 /**
  * instruction: halt
@@ -225,9 +231,9 @@
 #define getposxy	0xf2
 
 /**
- * Instruction screenout
+ * Instruction putchar
  *
- * produces a charachter output in screen mem at position
+ * produces a charachter output in screen display at position
  * px py.
  *
  * | 0000 0000  | 0000  0000  |  0000 0000 0000 0000 |
@@ -235,6 +241,6 @@
  *
  *   The result must be placed in general purpose registers
  */
-#define screenout	0xf3
+#define putchar		0xf3
 
 #endif /* OPCODES_H_ */

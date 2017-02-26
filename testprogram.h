@@ -50,11 +50,11 @@ uint32_t program_regression_test[] = {
 	(nop << 0),
 	(clrscr << 0),
 	(setposxy << 0) | 10  << 8 | (1 << 20),
-	(screenout << 0) | ('T' << 8),
+	(putchar << 0) | ('T' << 8),
 	(setposxy << 0) | 11  << 8 | (1 << 20),
-	(screenout << 0) | ('S' << 8),
+	(putchar << 0) | ('S' << 8),
 	(setposxy << 0) | 12  << 8 | (1 << 20),
-	(screenout << 0) | ('T' << 8),
+	(putchar << 0) | ('T' << 8),
 	(nop << 0),
 
 	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xe4 << 16), 			/* r1 = 0xe4 */
