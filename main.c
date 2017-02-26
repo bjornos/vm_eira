@@ -23,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <argp.h>
+#include <signal.h>
 
 #include "opcodes.h"
 #include "display.h"
@@ -51,6 +52,10 @@ enum conditions {
 	COND_UNDEFINED = 64,
 };
 
+typedef struct {
+  int debug;
+  int regression;
+} args_t;
 
 
 struct _cpu_regs {
@@ -69,20 +74,25 @@ static struct _machine {
 	struct _display_adapter display;
 } machine;
 
-
 static char* doc = "";
 static char* args_doc = "";
 
-typedef struct {
-  int debug;
-  int regression;
-} args_t;
 
 static struct argp_option opts[] = {
 	{"debug", 'd', 0, OPTION_ARG_OPTIONAL, "Enable debug"},
 	{"regression", 'r', "test", OPTION_ARG_OPTIONAL, "Run regression test program"},
 	{0}
 };
+
+static args_t args;
+
+void sig_handler(int signo)
+{
+	if (signo == SIGINT) {
+		machine.cpu_regs.panic = 1;
+		args.debug = 1;
+	}
+}
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -335,11 +345,12 @@ __inline static long cpu_fetch_instruction(void){
 
 int main(int argc,char *argv[])
 {
-	args_t args;
 	long instr_p;
 	int *run_test_prg = &args.regression;
 	int *debug = &args.debug;
 	struct argp argp = {opts, parse_opt, args_doc, doc};
+
+	signal(SIGINT, sig_handler);
 
 	args.debug = args.regression = 0;
 
@@ -360,10 +371,8 @@ int main(int argc,char *argv[])
 		if (machine.cpu_regs.exception)
 			cpu_exception(instr_p);
 
-		if (machine.display.refresh) {
+		if (machine.display.refresh)
 			display_retrace(&machine.display, machine.RAM);
-			usleep(100 * 1000);
-		}
 	}
 
 	if (*debug) {

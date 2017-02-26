@@ -1,4 +1,5 @@
 #include <string.h>
+#include <time.h>
 #include "display.h"
 #include "memory.h"
 #include "opcodes.h"
@@ -17,6 +18,7 @@ void display_retrace(struct _display_adapter *display, uint8_t machine_ram[])
 
 	printf("%c\n",(char)*display->mem & 0xff); /* todo: why is \n needed? */
 
+	nanosleep((const struct timespec[]){{0, 100000000L}}, NULL); /* sleep 100ms */
 	display->refresh = 0;
 }
 
