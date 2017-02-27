@@ -59,6 +59,7 @@ typedef struct {
 
 
 struct _cpu_regs {
+	uint16_t GP_REG[GP_REG_MAX]; /* General Purpose Registers */
 	long pc;
 	int sp;
 	int cr;
@@ -69,7 +70,6 @@ struct _cpu_regs {
 
 static struct _machine {
 	uint8_t RAM[RAM_SIZE];
-	uint16_t GP_REG[16]; /* General Purpose Registers - fixme: move into cpu regs */
 	struct _cpu_regs cpu_regs;
 	struct _display_adapter display;
 } machine;
@@ -126,7 +126,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 		local_dst = (*instr >> 8) & 0x0f;
 		local_src = (*instr >> 16) & 0xffff;
 
-		*(dst) = machine.GP_REG + local_dst;
+		*(dst) = machine.cpu_regs.GP_REG + local_dst;
 
 		if (*instr & OP_SRC_REG) {
 			/* value from register */
@@ -135,7 +135,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 				machine.cpu_regs.exception = EXC_REG;
 				goto out;
 			}
-			src = machine.GP_REG[local_src];
+			src = machine.cpu_regs.GP_REG[local_src];
 			goto out;
 		}
 		if (*instr & OP_SRC_MEM) {
@@ -176,7 +176,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 		else
 			*(dst) = (void *)machine.RAM + local_dst;
 
-		src = machine.GP_REG[local_src] & 0xff;
+		src = machine.cpu_regs.GP_REG[local_src] & 0xff;
 	}
 
 out:
@@ -283,7 +283,7 @@ void decode_instruction(uint32_t *instr)
 
 void reset_cpu(void) {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
-	memset(&machine.GP_REG, 0x00, GP_REG_MAX);
+	memset(&machine.cpu_regs.GP_REG, 0x00, GP_REG_MAX);
 
 	machine.cpu_regs.pc = 0;
 	machine.cpu_regs.sp = 0;
@@ -377,11 +377,11 @@ int main(int argc,char *argv[])
 
 	if (*debug) {
 		dump_ram(machine.RAM, MEM_START_DISPLAY,MEM_START_DISPLAY + 64);
-		dump_regs(machine.GP_REG);
+		dump_regs(machine.cpu_regs.GP_REG);
 	}
 
 	if (*run_test_prg) {
-		test_result(machine.GP_REG, machine.RAM);
+		test_result(machine.cpu_regs.GP_REG, machine.RAM);
 		printf("\n%s: all tests OK.\n",__func__);
 	}
 
