@@ -49,7 +49,7 @@ enum conditions {
 	COND_NZERO = 8,
 	COND_GR = 16,
 	COND_LE = 32,
-	COND_UNDEFINED = 64,
+	COND_UNDEF = 64,
 };
 
 typedef struct {
@@ -198,6 +198,18 @@ void compare(uint16_t t1, uint16_t t2)
 	DBG(printf("t1:%d t2:%d d:%d desc: %d\n",t1, t2,d,machine.cpu_regs.cr));
 }
 
+static __inline__ void branch(enum conditions cond, uint16_t addr)
+{
+	DBG(printf("%s ?: ",__func__));
+
+	if (machine.cpu_regs.cr & cond) {
+		machine.cpu_regs.pc = addr - 4; /* compensate for pc + 4 for every cycle */
+		DBG(printf("jump %ld",machine.cpu_regs.pc));
+	}
+	DBG(printf("\n"));
+
+	machine.cpu_regs.cr = COND_UNDEF;
+}
 
 
 void decode_instruction(uint32_t *instr)
@@ -244,26 +256,16 @@ void decode_instruction(uint32_t *instr)
 			DBG(printf("%ld\n", machine.cpu_regs.pc));
 			break;
 		case cmp: DBG(printf("cmp "));
-			machine.cpu_regs.cr &= COND_UNDEFINED;
+			machine.cpu_regs.cr &= COND_UNDEF;
 			src = mnemonic(instr, &dst, SIZE_INT, "cmp");
 			compare(src, *dst);
 			DBG(printf("cr: 0x%x\n", machine.cpu_regs.cr));
 			break;
 		case breq: DBG(printf("breq "));
-			if (machine.cpu_regs.cr &= COND_EQ) {// todo: make a jump func
-				machine.cpu_regs.pc = (*instr >> 16);
-				DBG(printf("jump to %ld \n",machine.cpu_regs.pc));
-				machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
-			}
+			branch(COND_EQ, (*instr >> 16));
 			break;
 		case brneq: DBG(printf("brneq "));
-			if (machine.cpu_regs.cr &= COND_NEQ) {// todo: make a jump func
-				DBG(printf("pc = %ld \n",machine.cpu_regs.pc));
-				machine.cpu_regs.pc = (*instr >> 16);
-				//printf("jump to %ld \n",machine.cpu_regs.pc);
-				machine.cpu_regs.pc -= 4; /* compensate for pc + 4 */
-				//exit(0);
-			}
+			branch(COND_NEQ, (*instr >> 16));
 			break;
 		case clrscr: DBG(printf("clrscr\n"));
 			display_request(&machine.display, instr, display_clr, machine.RAM);
@@ -288,7 +290,7 @@ void reset_cpu(void) {
 	machine.cpu_regs.sp = 0;
 	machine.cpu_regs.exception = 0;
 	machine.cpu_regs.panic = 0;
-	machine.cpu_regs.cr = COND_UNDEFINED;
+	machine.cpu_regs.cr = COND_UNDEF;
 
 	machine.cpu_regs.pc = MEM_START_ROM + PRG_HEADER_SIZE;
 }
