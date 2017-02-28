@@ -40,6 +40,8 @@ void test_result(uint16_t *GP_REG, uint8_t *RAM) {
 	assert(*(GP_REG + 10) == 196);
 	assert(*(GP_REG + 11) == 200);
 	assert(*(RAM + 8196) == 0x12);
+	assert(*(RAM + 8200) == 0x0f);
+	assert(*(RAM + 8201) == 0x07);
 }
 
 uint32_t program_regression_test[] = {
@@ -81,6 +83,9 @@ uint32_t program_regression_test[] = {
 	(add << 0) | (R12 << 8)  | OP_DST_MEM | OP_SRC_REG | (8196 << 16),	/* RAM[8196] = RAM[8196] + r12 (16 + 2)*/
 
 	(sub << 0) | (10 << 8)  | OP_DST_REG | OP_SRC_REG | (12 << 16),		/* r10 = r10 - r12 (198 - 2) */
+
+	(mov << 0) | (R15 << 8)  | OP_DST_REG | (1807 << 16),				/* r15 = 1807 */
+	(movi << 0) | (R15 << 8)  | OP_DST_MEM | (8200 << 16),				/* RAM[8200] = 1024 */
 
 	(halt << 0),
 };

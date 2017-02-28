@@ -171,12 +171,11 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 			goto out;
 		}
 
+		*(dst) = (void*)machine.RAM + local_dst;
 		if (opsize == SIZE_INT)
-			*(dst) = (uint16_t *)machine.RAM + local_dst; // FIXME: verify
+			src = machine.cpu_regs.GP_REG[local_src] & 0xffff;
 		else
-			*(dst) = (void *)machine.RAM + local_dst;
-
-		src = machine.cpu_regs.GP_REG[local_src] & 0xff;
+			src = machine.cpu_regs.GP_REG[local_src] & 0xff;
 	}
 
 out:
@@ -377,6 +376,7 @@ int main(int argc,char *argv[])
 
 	if (*debug) {
 		dump_ram(machine.RAM, MEM_START_DISPLAY,MEM_START_DISPLAY + 64);
+		dump_ram(machine.RAM, 8192,8192 + 64);
 		dump_regs(machine.cpu_regs.GP_REG);
 	}
 
