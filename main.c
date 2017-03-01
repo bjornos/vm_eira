@@ -211,7 +211,7 @@ static __inline__ void branch(enum conditions cond, uint16_t addr)
 }
 
 
-void decode_instruction(uint32_t *instr)
+void cpu_decode_instruction(uint32_t *instr)
 {
 	uint8_t opcode;
 	uint16_t src;
@@ -281,7 +281,7 @@ void decode_instruction(uint32_t *instr)
 }
 
 
-void reset_cpu(void) {
+void cpu_reset(void) {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
 	memset(&machine.cpu_regs.GP_REG, 0x00, GP_REG_MAX);
 
@@ -295,7 +295,7 @@ void reset_cpu(void) {
 }
 
 
-void load_program(uint32_t *prg, uint16_t addr) {
+void cpu_load_program(uint32_t *prg, uint16_t addr) {
 	int prg_size = prg[PRG_SIZE_OFFSET];
 
 	if (prg_size > (RAM_SIZE - MEM_START_PRG))
@@ -356,17 +356,17 @@ int main(int argc,char *argv[])
 
 	argp_parse(&argp,argc,argv,0,0,&args);
 
-	reset_cpu();
+	cpu_reset();
 	display_init(&machine.display, machine.RAM);
 
-	load_program(rom, MEM_START_ROM);
+	cpu_load_program(rom, MEM_START_ROM);
 
 	if (*run_test_prg)
-		load_program(program_regression_test, MEM_START_PRG);
+		cpu_load_program(program_regression_test, MEM_START_PRG);
 
 	while(!machine.cpu_regs.panic) {
 		instr_p = cpu_fetch_instruction();
-		decode_instruction((uint32_t *)&machine.RAM[instr_p]);
+		cpu_decode_instruction((uint32_t *)&machine.RAM[instr_p]);
 
 		if (machine.cpu_regs.exception)
 			cpu_exception(instr_p);
