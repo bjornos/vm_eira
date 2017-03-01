@@ -33,9 +33,9 @@
 #include "rom.h"
 #include "utils.h"
 
-
 #define DBG(x)
 #define CPU_VERSION	0x1
+
 
 enum op_size {
 	SIZE_BYTE,
@@ -52,11 +52,11 @@ enum conditions {
 	COND_UNDEF = 64,
 };
 
-typedef struct {
-  int debug;
-  int regression;
-} args_t;
 
+typedef struct {
+	int debug;
+	int regression;
+} args_t;
 
 struct _cpu_regs {
 	uint16_t GP_REG[GP_REG_MAX]; /* General Purpose Registers */
@@ -67,16 +67,11 @@ struct _cpu_regs {
 	int panic;
 };
 
-
 static struct _machine {
 	uint8_t RAM[RAM_SIZE];
 	struct _cpu_regs cpu_regs;
 	struct _display_adapter display;
 } machine;
-
-static char* doc = "";
-static char* args_doc = "";
-
 
 static struct argp_option opts[] = {
 	{"debug", 'd', 0, OPTION_ARG_OPTIONAL, "Enable debug"},
@@ -84,7 +79,11 @@ static struct argp_option opts[] = {
 	{0}
 };
 
+
+static char* doc = "";
+static char* args_doc = "";
 static args_t args;
+
 
 void sig_handler(int signo)
 {
@@ -93,6 +92,7 @@ void sig_handler(int signo)
 		args.debug = 1;
 	}
 }
+
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -111,6 +111,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 	return 0;
 }
+
 
 uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_instr[])
 {
@@ -181,6 +182,7 @@ mnemonic_out:
 		return src;
 }
 
+
 static __inline__ void compare(uint16_t c1, uint16_t c2)
 {
 	int d = c2 - c1;
@@ -196,12 +198,13 @@ static __inline__ void compare(uint16_t c1, uint16_t c2)
 	DBG(printf("c1:%d c2:%d d:%d desc: %d\n",c1,c2,d,machine.cpu_regs.cr));
 }
 
+
 static __inline__ void branch(enum conditions cond, uint16_t addr)
 {
 	DBG(printf("%s ?: ",__func__));
 
 	if (machine.cpu_regs.cr & cond) {
-		machine.cpu_regs.pc = addr - 4; /* compensate for pc + 4 for every cycle */
+		machine.cpu_regs.pc = addr - 4; /* compensate for pc + 4 each cycle */
 		DBG(printf("jump %ld",machine.cpu_regs.pc));
 	}
 	DBG(printf("\n"));
@@ -210,7 +213,7 @@ static __inline__ void branch(enum conditions cond, uint16_t addr)
 }
 
 
-void cpu_decode_instruction(uint32_t *instr)
+static void cpu_decode_instruction(uint32_t *instr)
 {
 	uint8_t opcode;
 	uint16_t src;
@@ -280,7 +283,7 @@ void cpu_decode_instruction(uint32_t *instr)
 }
 
 
-void cpu_reset(void) {
+static void cpu_reset(void) {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
 	memset(&machine.cpu_regs.GP_REG, 0x00, GP_REG_MAX);
 
@@ -294,7 +297,7 @@ void cpu_reset(void) {
 }
 
 
-void cpu_load_program(uint32_t *prg, uint16_t addr) {
+static void cpu_load_program(uint32_t *prg, uint16_t addr) {
 	int prg_size = prg[PRG_SIZE_OFFSET];
 
 	if (prg_size > (RAM_SIZE - MEM_START_PRG))
@@ -303,7 +306,8 @@ void cpu_load_program(uint32_t *prg, uint16_t addr) {
 		memcpy(&machine.RAM[addr], prg, prg_size);
 }
 
-void cpu_exception(long pc) {
+
+static void cpu_exception(long pc) {
 	printf("!! %s: ",__func__);
 
 	switch(machine.cpu_regs.exception) {
@@ -331,7 +335,8 @@ void cpu_exception(long pc) {
 	machine.cpu_regs.panic = 1;
 }
 
-__inline static long cpu_fetch_instruction(void){
+
+__inline__ static long cpu_fetch_instruction(void){
 	machine.cpu_regs.exception = 0;
 
 	/* each instruction is 4 bytes */
@@ -341,6 +346,7 @@ __inline static long cpu_fetch_instruction(void){
 
 	return machine.cpu_regs.pc;
 }
+
 
 int main(int argc,char *argv[])
 {
@@ -387,4 +393,3 @@ int main(int argc,char *argv[])
 
 	return 0;
 }
-
