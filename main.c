@@ -112,8 +112,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	return 0;
 }
 
-/* fixme: func name */
-uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_instr[])
+uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_instr[])
 {
 	uint16_t local_src;
 	uint16_t local_dst;
@@ -133,17 +132,17 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 			DBG(printf("GP_REG%d -> GP_REG%d\n",local_src, local_dst));
 			if (local_src > GP_REG_MAX) {
 				machine.cpu_regs.exception = EXC_REG;
-				goto out;
+				goto mnemonic_out;
 			}
 			src = machine.cpu_regs.GP_REG[local_src];
-			goto out;
+			goto mnemonic_out;
 		}
 		if (*instr & OP_SRC_MEM) {
 			/* copy from memory */
 			DBG(printf("0x%x -> GP_REG%d\n",local_src,local_dst));
 			if (local_src > RAM_SIZE) {
 				machine.cpu_regs.exception = EXC_MEM;
-				goto out;
+				goto mnemonic_out;
 			}
 			if (opsize == SIZE_INT) {
 				src = machine.RAM[local_src];
@@ -152,12 +151,12 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 				src = machine.RAM[local_src];
 
 			DBG(printf("RAM SRC = 0x%x  opsize=%d\n",src,opsize));
-			goto out;
+			goto mnemonic_out;
 		}
 		/* immediate value */
 		DBG(printf("%d -> GP_REG%d\n",local_src,local_dst));
 		src = local_src;
-		goto out;
+		goto mnemonic_out;
 	}
 
 	/* value destination memory */
@@ -168,7 +167,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 
 		if (local_dst > RAM_SIZE) {
 			machine.cpu_regs.exception = EXC_MEM;
-			goto out;
+			goto mnemonic_out;
 		}
 
 		*(dst) = (void*)machine.RAM + local_dst;
@@ -178,7 +177,7 @@ uint16_t mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_in
 			src = machine.cpu_regs.GP_REG[local_src] & 0xff;
 	}
 
-out:
+mnemonic_out:
 		return src;
 }
 
@@ -231,22 +230,22 @@ void cpu_decode_instruction(uint32_t *instr)
 			machine.cpu_regs.panic = 1;
 			break;
 		case mov:
-			src = mnemonic(instr, &dst, SIZE_BYTE, "mov");
+			src = decode_mnemonic(instr, &dst, SIZE_BYTE, "mov");
 			if (!machine.cpu_regs.exception)
 				*dst = src;
 			break;
 		case movi:
-			src = mnemonic(instr, &dst, SIZE_INT,"movi");
+			src = decode_mnemonic(instr, &dst, SIZE_INT,"movi");
 			if (!machine.cpu_regs.exception)
 				*dst = src;
 			break;
 		case add:
-			src = mnemonic(instr, &dst,SIZE_BYTE, "add");
+			src = decode_mnemonic(instr, &dst,SIZE_BYTE, "add");
 			if (!machine.cpu_regs.exception)
 				*dst += src;
 			break;
 		case sub: DBG(printf("sub\n"));
-			src = mnemonic(instr, &dst,SIZE_BYTE,"sub");
+			src = decode_mnemonic(instr, &dst,SIZE_BYTE,"sub");
 			if (!machine.cpu_regs.exception)
 				*dst -= src;
 			break;
@@ -256,7 +255,7 @@ void cpu_decode_instruction(uint32_t *instr)
 			break;
 		case cmp: DBG(printf("cmp "));
 			machine.cpu_regs.cr &= COND_UNDEF;
-			src = mnemonic(instr, &dst, SIZE_INT, "cmp");
+			src = decode_mnemonic(instr, &dst, SIZE_INT, "cmp");
 			compare(src, *dst);
 			DBG(printf("cr: 0x%x\n", machine.cpu_regs.cr));
 			break;
