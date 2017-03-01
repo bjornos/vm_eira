@@ -182,20 +182,19 @@ out:
 		return src;
 }
 
-void compare(uint16_t t1, uint16_t t2)
+static __inline__ void compare(uint16_t c1, uint16_t c2)
 {
-	int d = t2 - t1;
+	int d = c2 - c1;
 
 	DBG(printf("%s --- ",__func__));
 
-	if (d == 0)
-		machine.cpu_regs.cr = COND_EQ | COND_ZERO;
-	if (d > 0)
-		machine.cpu_regs.cr = COND_GR | COND_NEQ;
-	if (d < 0)
-		machine.cpu_regs.cr = COND_LE | COND_NEQ;
+	machine.cpu_regs.cr =
+			(d == 0) ? (COND_EQ | COND_ZERO) :
+			(d > 0) ? (COND_GR | COND_NEQ) :
+			(d < 0) ? (COND_LE | COND_NEQ) :
+			COND_UNDEF;
 
-	DBG(printf("t1:%d t2:%d d:%d desc: %d\n",t1, t2,d,machine.cpu_regs.cr));
+	DBG(printf("c1:%d c2:%d d:%d desc: %d\n",c1,c2,d,machine.cpu_regs.cr));
 }
 
 static __inline__ void branch(enum conditions cond, uint16_t addr)
