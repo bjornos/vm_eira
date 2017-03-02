@@ -59,12 +59,12 @@ typedef struct {
 } args_t;
 
 struct _cpu_regs {
-	uint16_t GP_REG[GP_REG_MAX]; /* General Purpose Registers */
-	long pc;
-	int sp;
-	int cr;
+	uint16_t GP_REG[GP_REG_MAX];	/* general purpose registers */
+	long pc;						/* program counter */
+	int sp;							/* stack pointer */
+	int cr;							/* conditional register */
 	char exception;
-	int panic;
+	unsigned char panic;			/* halt cpu */
 };
 
 static struct _machine {
