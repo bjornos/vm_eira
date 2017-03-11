@@ -45,11 +45,10 @@ void test_result(uint16_t *GP_REG, uint8_t *RAM) {
 }
 
 uint32_t program_regression_test[] = {
-	PRG_MAGIC,		/* magic */
+	PRG_MAGIC_HEADER,	/* magic */
 	(1 << 0),		/* reserved */
 	(1 << 0),		/* reserved */
-	(1024 << 0),		/* program size  */
-	(nop << 0),
+	(112 << 0),		/* code size  */
 	(clrscr << 0),
 	(setposxy << 0) | 10  << 8 | (1 << 20),
 	(putchar << 0) | ('T' << 8),

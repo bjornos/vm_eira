@@ -19,23 +19,38 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PRG_H_
-#define __PRG_H_
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <argp.h>
+#include <signal.h>
+#include <unistd.h>
 
-#include <stdint.h>
+#include "opcodes.h"
+#include "memory.h"
+#include "prg.h"
+#include "rom.h"
+#include "testprogram.h"
 
-#define PRG_MAGIC_HEADER	0xe113a100
 
-struct _prg_header {
-	uint32_t magic;
-	uint32_t reserved1;
-	uint32_t reserved2;
-	uint32_t code_size;
-};
+int main(int argc,char *argv[])
+{
+/*	char const* const filename = argv[1];
+	FILE *prg = fopen(filename, "r");
+	char line[0xff];
 
-struct _prg_format {
-	struct _prg_header header;
-	uint32_t *code_segment;
-};
+	while (fgets(line, sizeof(line), prg)) {
+		printf("%s", line);
+	}
+	fclose(prg);
+*/
+	FILE *fd;
+	fd = fopen("bin/eira_rom.bin","wb");
+	fwrite(rom, sizeof(rom),1,fd);
+	fclose(fd);
+	fd = fopen("bin/eira_test.bin","wb");
+	fwrite(program_regression_test, sizeof(program_regression_test),1,fd);
+	fclose(fd);
 
-#endif /* __PRG_H_ */
+	return 0;
+}

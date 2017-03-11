@@ -26,12 +26,17 @@
 #include "registers.h"
 #include "prg.h"
 
-uint32_t rom[] = {
-	PRG_MAGIC,		/* magic */
-	(1 << 0),		/* reserved */
-	(1 << 0),		/* reserved */
-	(1024 << 0),		/* program size  */
+const uint32_t program_reset[] = {
+	(jmp << 0) | (MEM_START_ROM << 8),
 	(nop << 0),
+	(halt << 0),
+};
+
+const uint32_t rom[] = {
+	PRG_MAGIC_HEADER,	/* magic */
+	(1 << 0),		/* reserved */
+	(1 << 0),		/* reserved */
+	(126 << 0),		/* program size  */
 	(clrscr << 0),
 	(setposxy << 0) | 10  << 8 | (1 << 20),
 	(putchar << 0) | ('e' << 8),
@@ -62,26 +67,14 @@ uint32_t rom[] = {
 	(setposxy << 0) | 12  << 8 | (2 << 20),
 	(putchar << 0) | ('\'' << 8),
 
-	/* so the plan is to jump to program memory and start execute
-	 * ... if there is a program loaded there.
-	 * otherwise roll back to start of ROM code and wait for a program
-	 * to be loaded (TBD)
+	/* jump to program memory and start any program loaded
+	 * if no program is loaded we will end up in MEM_START_ROM again.
 	 */
-	(movi << 0) | (R1 << 8) | OP_SRC_MEM | OP_DST_REG | (MEM_START_PRG << 16), 		/* mov r1, @mem_start_prog[0]+[2] */
-	(movi << 0) | (R2 << 8) | OP_SRC_MEM | OP_DST_REG | ((MEM_START_PRG + 2) << 16),	/* mov r2, @mem_start_prog[3]+[4] */
-
-	(mov << 0) | (R3 << 8) | OP_DST_REG | (PRG_MAGIC << 16),				/* mov r3, prog magic low bits */
-	(mov << 0) | (R4 << 8) | OP_DST_REG | ((PRG_MAGIC >> 16) << 16),			/* mov r4. prog magic high bits */
-
-	(cmp << 0) | (R1 << 8) | OP_DST_REG | OP_SRC_REG | (3 << 16),				/* r1 == r3? */
-	(brneq << 0) | ((MEM_START_ROM + PRG_HEADER_SIZE) << 16),				/* not eq. jump to start of ROM */
-
-	(cmp << 0) | (R2 << 8) | OP_DST_REG | OP_SRC_REG | (4 << 16),				/* r2 == r4? */
-	(brneq << 0) | ((MEM_START_ROM + PRG_HEADER_SIZE) << 16),				/* not eq. jump to start of ROM */
-	(jmp << 0) | ((MEM_START_PRG + PRG_HEADER_SIZE) << 8),					/* run program */
+	(jmp << 0) |  (MEM_START_PRG << 8),
 
 	(nop << 0),
 	(halt << 0),
 };
+
 
 #endif /* __ROM_H_ */

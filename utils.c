@@ -39,7 +39,7 @@ void dump_ram(uint8_t *RAM, int from, int to)
 		printf("0x%.2x:\t", rows + from);
 		for (v=0; v<grid; v++) {
 			assert(from + p <= 0xffff); /* fixme #define RAM_SIZE */
-			printf("%d\t", *(RAM + from + p) & 0xff);
+			printf("%x\t", *(RAM + from + p) & 0xff);
 			p++;
 		}
 		rows +=grid;

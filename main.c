@@ -20,6 +20,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <argp.h>
@@ -253,7 +254,7 @@ static void cpu_decode_instruction(uint32_t *instr)
 				*dst -= src;
 			break;
 		case jmp: DBG(printf("jmp "));
-			machine.cpu_regs.pc = (*instr >> 8) - 4; /* compensate for pc++ */
+			machine.cpu_regs.pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
 			DBG(printf("%ld\n", machine.cpu_regs.pc));
 			break;
 		case cmp: DBG(printf("cmp "));
@@ -293,17 +294,33 @@ static void cpu_reset(void) {
 	machine.cpu_regs.panic = 0;
 	machine.cpu_regs.cr = COND_UNDEF;
 
-	machine.cpu_regs.pc = MEM_START_ROM + PRG_HEADER_SIZE;
+	machine.cpu_regs.pc = MEM_START_ROM - sizeof(uint32_t);
+
+	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 }
 
 
-static void cpu_load_program(uint32_t *prg, uint16_t addr) {
-	int prg_size = prg[PRG_SIZE_OFFSET];
+static void cpu_load_program(const char filename[], uint16_t addr) {
+	FILE *prog;
+	struct _prg_format program;
 
-	if (prg_size > (RAM_SIZE - MEM_START_PRG))
-		machine.cpu_regs.exception = EXC_PRG;
-	else
-		memcpy(&machine.RAM[addr], prg, prg_size);
+	prog = fopen(filename,"rb");
+	fread(&program.header,sizeof(struct _prg_header),1,prog);
+
+	if (program.header.magic == PRG_MAGIC_HEADER) {
+		program.code_segment = malloc(program.header.code_size * sizeof(uint8_t));
+
+		if ((program.header.code_size > (RAM_SIZE - MEM_START_PRG)) ||
+			!program.code_segment) {
+			machine.cpu_regs.exception = EXC_PRG;
+		} else {
+			fread(program.code_segment,program.header.code_size,1,prog);
+			memcpy(&machine.RAM[addr], program.code_segment, program.header.code_size);
+			free(program.code_segment);
+		}
+	}
+
+	fclose(prog);
 }
 
 
@@ -340,7 +357,7 @@ __inline__ static long cpu_fetch_instruction(void){
 	machine.cpu_regs.exception = 0;
 
 	/* each instruction is 4 bytes */
-	machine.cpu_regs.pc += 4;
+	machine.cpu_regs.pc += sizeof(uint32_t);
 	if (machine.cpu_regs.pc >= (RAM_SIZE - 3))
 		machine.cpu_regs.exception = EXC_PRG;
 
@@ -364,10 +381,10 @@ int main(int argc,char *argv[])
 	cpu_reset();
 	display_init(&machine.display, machine.RAM);
 
-	cpu_load_program(rom, MEM_START_ROM);
+	cpu_load_program("bin/eira_rom.bin", MEM_START_ROM);
 
 	if (*run_test_prg)
-		cpu_load_program(program_regression_test, MEM_START_PRG);
+		cpu_load_program("bin/eira_test.bin", MEM_START_PRG);
 
 	while(!machine.cpu_regs.panic) {
 		instr_p = cpu_fetch_instruction();
@@ -381,8 +398,7 @@ int main(int argc,char *argv[])
 	}
 
 	if (*debug) {
-		dump_ram(machine.RAM, MEM_START_DISPLAY,MEM_START_DISPLAY + 64);
-		dump_ram(machine.RAM, 8192,8192 + 64);
+		dump_ram(machine.RAM, MEM_START_PRG,MEM_START_PRG + 64);
 		dump_regs(machine.cpu_regs.GP_REG);
 	}
 
