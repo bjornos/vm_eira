@@ -22,6 +22,7 @@
 #ifndef OPCODES_H_
 #define OPCODES_H_
 
+#define OPCODE_NAME_MAX	16
 /* does not really belong here. move elsewhere later. */
 enum exceptions {
 	EXC_NONE,

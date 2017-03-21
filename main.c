@@ -37,7 +37,6 @@
 #define DBG(x)
 #define CPU_VERSION	0x1
 
-
 enum op_size {
 	SIZE_BYTE,
 	SIZE_INT,
@@ -72,6 +71,7 @@ static struct _machine {
 	uint8_t RAM[RAM_SIZE];
 	struct _cpu_regs cpu_regs;
 	struct _display_adapter display;
+	struct _dbg dbg_info[DBG_HISTORY];
 } machine;
 
 static struct argp_option opts[] = {
@@ -84,7 +84,7 @@ static struct argp_option opts[] = {
 static char* doc = "";
 static char* args_doc = "";
 static args_t args;
-
+static int dbg_index = 0;
 
 void sig_handler(int signo)
 {
@@ -113,6 +113,25 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	return 0;
 }
 
+static __inline__ void debug_opcode(const char op[])
+{
+	memset(machine.dbg_info[dbg_index].opcode, '\0', 16);
+	strncpy(machine.dbg_info[dbg_index].opcode, op, strlen(op));
+}
+static __inline__ void debug_instr(uint32_t *instr)
+{
+	machine.dbg_info[dbg_index].instr = *instr;
+}
+static __inline__ void debug_result(long *res)
+{
+	machine.dbg_info[dbg_index].op_result = *res;
+}
+static __inline__ void debug_args(uint16_t *arg1,uint16_t *arg2)
+{
+	machine.dbg_info[dbg_index].op_arg1 = *arg1;
+	machine.dbg_info[dbg_index].op_arg2 = *arg2;
+}
+
 
 uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_instr[])
 {
@@ -120,7 +139,8 @@ uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char
 	uint16_t local_dst;
 	uint16_t src;
 
-	DBG(printf("%s %s --- ",__func__, dbg_instr));
+	DBG(printf("\n%s %s ---\n ",__func__, dbg_instr));
+	debug_opcode(dbg_instr);
 
 	/* value destination general purpose register */
 	if (*instr & OP_DST_REG) {
@@ -205,14 +225,12 @@ static __inline__ void branch(enum conditions cond, uint16_t addr)
 	DBG(printf("%s ?: ",__func__));
 
 	if (machine.cpu_regs.cr & cond) {
-		machine.cpu_regs.pc = addr - 4; /* compensate for pc + 4 each cycle */
-		DBG(printf("jump %ld",machine.cpu_regs.pc));
+		machine.cpu_regs.pc = addr - sizeof(uint32_t);
+		debug_result(&machine.cpu_regs.pc);
 	}
-	DBG(printf("\n"));
 
 	machine.cpu_regs.cr = COND_UNDEF;
 }
-
 
 static void cpu_decode_instruction(uint32_t *instr)
 {
@@ -225,12 +243,14 @@ static void cpu_decode_instruction(uint32_t *instr)
 
 	DBG(printf("%s 0x%x\n",__func__, *instr));
 
+	debug_instr(instr);
+
 	opcode = *instr & 0xff;
 
 	switch(opcode) {
-		case nop: DBG(printf("nop\n"));
+		case nop: debug_opcode("nop");
 			break;
-		case halt: DBG(printf("halt\n"));
+		case halt: debug_opcode("halt");
 			machine.cpu_regs.panic = 1;
 			break;
 		case mov:
@@ -248,34 +268,35 @@ static void cpu_decode_instruction(uint32_t *instr)
 			if (!machine.cpu_regs.exception)
 				*dst += src;
 			break;
-		case sub: DBG(printf("sub\n"));
+		case sub:
 			src = decode_mnemonic(instr, &dst,SIZE_BYTE,"sub");
 			if (!machine.cpu_regs.exception)
 				*dst -= src;
 			break;
-		case jmp: DBG(printf("jmp "));
+		case jmp: debug_opcode("jmp");
 			machine.cpu_regs.pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
-			DBG(printf("%ld\n", machine.cpu_regs.pc));
+			debug_result(&machine.cpu_regs.pc);
 			break;
-		case cmp: DBG(printf("cmp "));
+		case cmp: debug_opcode("cmp");
 			machine.cpu_regs.cr &= COND_UNDEF;
 			src = decode_mnemonic(instr, &dst, SIZE_INT, "cmp");
 			compare(src, *dst);
-			DBG(printf("cr: 0x%x\n", machine.cpu_regs.cr));
+			debug_args(&src, dst);
+			debug_result((long *)&machine.cpu_regs.cr);
 			break;
-		case breq: DBG(printf("breq "));
+		case breq: debug_opcode("breq");
 			branch(COND_EQ, (*instr >> 16));
 			break;
-		case brneq: DBG(printf("brneq "));
+		case brneq: debug_opcode("brneq");
 			branch(COND_NEQ, (*instr >> 16));
 			break;
-		case clrscr: DBG(printf("clrscr\n"));
+		case clrscr: debug_opcode("clrscr");
 			display_request(&machine.display, instr, display_clr, machine.RAM);
 			break;
-		case setposxy: DBG(printf("setposxy\n"));
+		case setposxy: debug_opcode("setposxy");
 			display_request(&machine.display, instr, display_setxy, machine.RAM);
 			break;
-		case putchar: DBG(printf("putchar\n"));
+		case putchar: debug_opcode("putchar");
 			display_request(&machine.display, instr, display_setc, machine.RAM);
 			break;
 		default: machine.cpu_regs.exception = EXC_INSTR;
@@ -287,6 +308,10 @@ static void cpu_decode_instruction(uint32_t *instr)
 static void cpu_reset(void) {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
 	memset(&machine.cpu_regs.GP_REG, 0x00, GP_REG_MAX);
+
+	for (int d=0; d < DBG_HISTORY; d++)
+		memset(&machine.dbg_info[d], 0x00, sizeof(struct _dbg));
+	dbg_index = 0;
 
 	machine.cpu_regs.pc = 0;
 	machine.cpu_regs.sp = 0;
@@ -323,6 +348,9 @@ static void cpu_load_program(const char filename[], uint16_t addr) {
 	fclose(prog);
 }
 
+static __inline__ void cpu_load_program_local(uint32_t *prg, uint16_t addr) {
+		memcpy(&machine.RAM[addr], prg + 4, 1024);
+}
 
 static void cpu_exception(long pc) {
 	printf("!! %s: ",__func__);
@@ -361,6 +389,9 @@ __inline__ static long cpu_fetch_instruction(void){
 	if (machine.cpu_regs.pc >= (RAM_SIZE - 3))
 		machine.cpu_regs.exception = EXC_PRG;
 
+	dbg_index = (dbg_index + 1) % DBG_HISTORY;
+	memset(&machine.dbg_info[dbg_index], 0x00, sizeof(struct _dbg));
+
 	return machine.cpu_regs.pc;
 }
 
@@ -384,7 +415,8 @@ int main(int argc,char *argv[])
 	cpu_load_program("bin/eira_rom.bin", MEM_START_ROM);
 
 	if (*run_test_prg)
-		cpu_load_program("bin/eira_test.bin", MEM_START_PRG);
+		//cpu_load_program("bin/eira_test.bin", MEM_START_PRG);
+		cpu_load_program_local(program_regression_test, MEM_START_PRG);
 
 	while(!machine.cpu_regs.panic) {
 		instr_p = cpu_fetch_instruction();
@@ -395,17 +427,18 @@ int main(int argc,char *argv[])
 
 		if (machine.display.refresh)
 			display_retrace(&machine.display, machine.RAM);
-	}
 
-	if (*debug) {
-		dump_ram(machine.RAM, MEM_START_PRG,MEM_START_PRG + 64);
-		dump_regs(machine.cpu_regs.GP_REG);
+		if (*debug) {
+			gotoxy(1,10);
+			dump_instr(machine.dbg_info, dbg_index);
+			gotoxy(1,10 + DBG_HISTORY + 4);
+			dump_regs(machine.cpu_regs.GP_REG);
+		}
 	}
 
 	if (*run_test_prg) {
 		test_result(machine.cpu_regs.GP_REG, machine.RAM);
 		printf("\n%s: all tests OK.\n",__func__);
 	}
-
 	return 0;
 }

@@ -42,6 +42,7 @@ void test_result(uint16_t *GP_REG, uint8_t *RAM) {
 	assert(*(RAM + 8196) == 0x12);
 	assert(*(RAM + 8200) == 0x0f);
 	assert(*(RAM + 8201) == 0x07);
+	assert(*(GP_REG + 7) == *(GP_REG + 8));
 }
 
 uint32_t program_regression_test[] = {
@@ -85,6 +86,14 @@ uint32_t program_regression_test[] = {
 
 	(mov << 0) | (R15 << 8)  | OP_DST_REG | (1807 << 16),				/* r15 = 1807 */
 	(movi << 0) | (R15 << 8)  | OP_DST_MEM | (8200 << 16),				/* RAM[8200] = 1024 */
+
+	/* test cmp and branch instructions. */
+	(mov << 0) | (R7 << 8)  | OP_DST_REG | (4 << 16),				/* r7=4  */
+	(mov << 0) | (R8 << 8)  | OP_DST_REG | (1 << 16),				/* r8=1  */
+//label test_cmp:  [addr 4212]
+	(sub << 0) | (R7 << 8)  | OP_DST_REG | (1 << 16),				/* r7 = r7 - 1 */
+	(cmp << 0) | (R7 << 8) | OP_DST_REG | OP_SRC_REG | (8 << 16),	/* r7 == r8? */
+	(brneq << 0) | ((0x1074) << 16),								/* not eq. jump to @test_cmp */
 
 	(halt << 0),
 };

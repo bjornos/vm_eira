@@ -22,6 +22,19 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "opcodes.h"
+
+#define DBG_HISTORY 6
+
+struct _dbg {
+	uint32_t instr;
+	char opcode[OPCODE_NAME_MAX];
+	uint16_t op_arg1;
+	uint16_t op_arg2;
+	long op_result;
+};
+
+void dump_instr(struct _dbg *dbg, int dbg_index);
 
 void dump_ram(uint8_t *RAM, int from, int to);
 
