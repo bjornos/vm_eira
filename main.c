@@ -60,11 +60,11 @@ typedef struct {
 
 struct _cpu_regs {
 	uint16_t GP_REG[GP_REG_MAX];	/* general purpose registers */
-	long pc;						/* program counter */
-	int sp;							/* stack pointer */
-	int cr;							/* conditional register */
+	long pc;			/* program counter */
+	int sp;				/* stack pointer */
+	int cr;				/* conditional register */
 	char exception;
-	unsigned char panic;			/* halt cpu */
+	unsigned char panic;		/* halt cpu */
 };
 
 static struct _machine {
@@ -462,5 +462,6 @@ int main(int argc,char *argv[])
 		test_result(machine.cpu_regs.GP_REG, machine.RAM);
 		printf("\n%s: all tests OK.\n",__func__);
 	}
+
 	return 0;
 }
