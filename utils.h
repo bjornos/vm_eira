@@ -24,7 +24,7 @@
 
 #include "opcodes.h"
 
-#define DBG_HISTORY 6
+#define DBG_HISTORY 8 /* fixme: program argument instead */
 
 struct _dbg {
 	uint32_t instr;

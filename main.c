@@ -133,14 +133,11 @@ static __inline__ void debug_args(uint16_t *arg1,uint16_t *arg2)
 }
 
 
-uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize, const char dbg_instr[])
+uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize)
 {
 	uint16_t local_src;
 	uint16_t local_dst;
 	uint16_t src;
-
-	DBG(printf("\n%s %s ---\n ",__func__, dbg_instr));
-	debug_opcode(dbg_instr);
 
 	/* value destination general purpose register */
 	if (*instr & OP_DST_REG) {
@@ -210,12 +207,15 @@ static __inline__ void compare(uint16_t c1, uint16_t c2)
 
 	DBG(printf("%s --- ",__func__));
 
+	debug_args((uint16_t*)&c1, (uint16_t*)&c1);
+
 	machine.cpu_regs.cr =
 			(d == 0) ? (COND_EQ | COND_ZERO) :
 			(d > 0) ? (COND_GR | COND_NEQ) :
 			(d < 0) ? (COND_LE | COND_NEQ) :
 			COND_UNDEF;
 
+	debug_result((long*)&machine.cpu_regs.cr);
 	DBG(printf("c1:%d c2:%d d:%d desc: %d\n",c1,c2,d,machine.cpu_regs.cr));
 }
 
@@ -224,11 +224,13 @@ static __inline__ void branch(enum conditions cond, uint16_t addr)
 {
 	DBG(printf("%s ?: ",__func__));
 
+	debug_args((uint16_t*)&machine.cpu_regs.cr, (uint16_t*)&cond);
+
+
 	if (machine.cpu_regs.cr & cond) {
 		machine.cpu_regs.pc = addr - sizeof(uint32_t);
-		debug_result(&machine.cpu_regs.pc);
 	}
-
+	debug_result(&machine.cpu_regs.pc);
 	machine.cpu_regs.cr = COND_UNDEF;
 }
 
@@ -248,55 +250,72 @@ static void cpu_decode_instruction(uint32_t *instr)
 	opcode = *instr & 0xff;
 
 	switch(opcode) {
-		case nop: debug_opcode("nop");
+		case nop:
+			debug_opcode("nop");
 			break;
-		case halt: debug_opcode("halt");
+		case halt:
+			debug_opcode("halt");
 			machine.cpu_regs.panic = 1;
 			break;
 		case mov:
-			src = decode_mnemonic(instr, &dst, SIZE_BYTE, "mov");
+			debug_opcode("mov");
+			src = decode_mnemonic(instr, &dst, SIZE_BYTE);
+			debug_args(&src, dst);
 			if (!machine.cpu_regs.exception)
 				*dst = src;
 			break;
 		case movi:
-			src = decode_mnemonic(instr, &dst, SIZE_INT,"movi");
+			debug_opcode("movi");
+			src = decode_mnemonic(instr, &dst, SIZE_INT);
+			debug_args(&src, dst);
 			if (!machine.cpu_regs.exception)
 				*dst = src;
 			break;
 		case add:
-			src = decode_mnemonic(instr, &dst,SIZE_BYTE, "add");
+			debug_opcode("add");
+			src = decode_mnemonic(instr, &dst,SIZE_BYTE);
+			debug_args(&src, dst);
 			if (!machine.cpu_regs.exception)
 				*dst += src;
 			break;
 		case sub:
-			src = decode_mnemonic(instr, &dst,SIZE_BYTE,"sub");
+			debug_opcode("sub");
+			src = decode_mnemonic(instr, &dst,SIZE_BYTE);
+			debug_args(&src, dst);
 			if (!machine.cpu_regs.exception)
 				*dst -= src;
 			break;
-		case jmp: debug_opcode("jmp");
+		case jmp:
+			debug_opcode("jmp");
 			machine.cpu_regs.pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
 			debug_result(&machine.cpu_regs.pc);
 			break;
-		case cmp: debug_opcode("cmp");
+		case cmp:
+			debug_opcode("cmp");
 			machine.cpu_regs.cr &= COND_UNDEF;
-			src = decode_mnemonic(instr, &dst, SIZE_INT, "cmp");
+			src = decode_mnemonic(instr, &dst, SIZE_INT);
 			compare(src, *dst);
 			debug_args(&src, dst);
 			debug_result((long *)&machine.cpu_regs.cr);
 			break;
-		case breq: debug_opcode("breq");
+		case breq:
+			debug_opcode("breq");
 			branch(COND_EQ, (*instr >> 16));
 			break;
-		case brneq: debug_opcode("brneq");
+		case brneq:
+			debug_opcode("brneq");
 			branch(COND_NEQ, (*instr >> 16));
 			break;
-		case clrscr: debug_opcode("clrscr");
+		case clrscr:
+			debug_opcode("clrscr");
 			display_request(&machine.display, instr, display_clr, machine.RAM);
 			break;
-		case setposxy: debug_opcode("setposxy");
+		case setposxy:
+			debug_opcode("setposxy");
 			display_request(&machine.display, instr, display_setxy, machine.RAM);
 			break;
-		case putchar: debug_opcode("putchar");
+		case putchar:
+			debug_opcode("putchar");
 			display_request(&machine.display, instr, display_setc, machine.RAM);
 			break;
 		default: machine.cpu_regs.exception = EXC_INSTR;
@@ -428,10 +447,13 @@ int main(int argc,char *argv[])
 		if (machine.display.refresh)
 			display_retrace(&machine.display, machine.RAM);
 
+		if (machine.display.refresh)
+			display_retrace(&machine.display, machine.RAM);
+
 		if (*debug) {
-			gotoxy(1,10);
+			gotoxy(1,5);
 			dump_instr(machine.dbg_info, dbg_index);
-			gotoxy(1,10 + DBG_HISTORY + 4);
+			gotoxy(1,5 + DBG_HISTORY + 4);
 			dump_regs(machine.cpu_regs.GP_REG);
 		}
 	}

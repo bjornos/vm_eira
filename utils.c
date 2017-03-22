@@ -21,6 +21,7 @@
 
 #include <assert.h>
 #include "utils.h"
+#include "registers.h"
 #include "display.h"
 
 void dump_instr(struct _dbg *dbg, int dbg_index)
@@ -30,12 +31,12 @@ void dump_instr(struct _dbg *dbg, int dbg_index)
 	c = dbg_index;
 
 	printf("frame\tinstr\t\topcode\t\targ1\targ2\tresult\n");
-	printf("========================================================\n");
+	printf("=============================================================\n");
 	for (q=0; q < DBG_HISTORY; q++) {
 		printf("\033[2K");
 		printf("%d\t", q);
 		printf("0x%08x\t", dbg[c].instr);
-		printf("%s\t\t", dbg[c].opcode);
+		printf("%-16s", dbg[c].opcode);
 		printf("%d\t", dbg[c].op_arg1);
 		printf("%d\t", dbg[c].op_arg2);
 		printf("%ld\n", dbg[c].op_result);
@@ -71,20 +72,21 @@ void dump_ram(uint8_t *RAM, int from, int to)
 }
 
 
-void dump_regs(uint16_t *GP_REG)
+void dump_regs(uint16_t *REG)
 {
 	int i,o;
 	int grid = 4;
 	int r = 0;
 
-	printf("General Purpose Registers:\n=========================\n");
-	for (i=0; i <= (16 / grid); i++) {
+	printf("Registers:\n=========\n");
+	for (i=0; i < (16 / grid); i++) {
 		for (o=0; o < grid; o++) {
-			printf("R%d:\t%d\t",r,*(GP_REG + r));
+			printf("R%d:\t%d\t",r,*(REG + r));
 			r++;
 		}
 		printf("\n");
 	}
+	printf("PC:\t%d",*(REG + GP_REG_MAX + 1)); /* yes. this assumes pc is placed right after gp regs in struct */
 	printf("\n");
 }
 
