@@ -447,9 +447,6 @@ int main(int argc,char *argv[])
 		if (machine.display.refresh)
 			display_retrace(&machine.display, machine.RAM);
 
-		if (machine.display.refresh)
-			display_retrace(&machine.display, machine.RAM);
-
 		if (*debug) {
 			gotoxy(1,5);
 			dump_instr(machine.dbg_info, dbg_index);
