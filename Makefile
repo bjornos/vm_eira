@@ -22,5 +22,5 @@ utils.o: utils.c
 	$(CC) $(CFLAGS) utils.c
 
 clean:
-	rm -v *.o vm_eira asm2bin
+	rm -fv *.o vm_eira asm2bin
 
