@@ -177,6 +177,9 @@ enum exceptions {
  * syntax: breq [address]
  *
  * jump to address if compare result in conditional register is COND_EQ
+ * if address is less than ROM start, the value in of GP REG [register]
+ * is used instead. if the address value is above GP REG MAX, an exception
+ * will occur.
  *
  * | 0001 0010 | 0000 0000 | 0000 0000 0000 0000 |
  * 0           8           16
@@ -189,14 +192,31 @@ enum exceptions {
  *
  * syntax: brneq [address]
  *
- * jump to address if compare result in conditional register is COND_NEQ
+ * jump to address if compare result in conditional register is COND_NEQ.
+ * if address is less than ROM start, the value in of GP REG [register]
+ * is used instead. if the address value is above GP REG MAX, an exception
+ * will occur.
  *
  * | 0001 0010 | 0000 0000 | 0000 0000 0000 0000 |
  * 0           8           16
- *    instr       reserved           addr
+ *    instr       reserved       addr | register
 */
 #define brneq		0x13
 
+
+/**
+ * instruction: stopc
+ *
+ * syntax: stopc [register]
+ *
+ * store current value of program counter into general
+ * purpose register
+ *
+ * | 0001 0010 | 0000 0000 | 0000 0000 0000 0000 |
+ * 0           8           16
+ *    instr       register       reserved
+*/
+#define stopc		0x14
 
 
 /*

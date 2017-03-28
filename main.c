@@ -128,8 +128,10 @@ static __inline__ void debug_result(long *res)
 }
 static __inline__ void debug_args(uint16_t *arg1,uint16_t *arg2)
 {
-	machine.dbg_info[dbg_index].op_arg1 = *arg1;
-	machine.dbg_info[dbg_index].op_arg2 = *arg2;
+	if (arg1)
+		machine.dbg_info[dbg_index].op_arg1 = *arg1;
+	if (arg2)
+		machine.dbg_info[dbg_index].op_arg2 = *arg2;
 }
 
 
@@ -239,6 +241,7 @@ static void cpu_decode_instruction(uint32_t *instr)
 	uint8_t opcode;
 	uint16_t src;
 	uint16_t *dst;
+	uint16_t addr;
 
 	if (machine.cpu_regs.exception)
 		return;
@@ -300,11 +303,34 @@ static void cpu_decode_instruction(uint32_t *instr)
 			break;
 		case breq:
 			debug_opcode("breq");
-			branch(COND_EQ, (*instr >> 16));
+			addr = (*instr >> 16);
+			if (addr > MEM_START_ROM)
+				branch(COND_EQ, (*instr >> 16));
+			else {
+				if (addr > GP_REG_MAX)
+					machine.cpu_regs.exception = EXC_INSTR;
+				else
+					branch(COND_EQ, machine.cpu_regs.GP_REG[addr]);
+			}
 			break;
 		case brneq:
 			debug_opcode("brneq");
-			branch(COND_NEQ, (*instr >> 16));
+			addr = (*instr >> 16);
+			if (addr > MEM_START_ROM)
+				branch(COND_NEQ, (*instr >> 16));
+			else {
+				if (addr > GP_REG_MAX)
+					machine.cpu_regs.exception = EXC_INSTR;
+				else
+					branch(COND_NEQ, machine.cpu_regs.GP_REG[addr]);
+			}
+			break;
+		case stopc:
+			debug_opcode("stopc");
+			addr = (*instr >> 8);
+			debug_args(&addr, NULL);
+			debug_result(&machine.cpu_regs.pc);
+			machine.cpu_regs.GP_REG[(*instr >> 8)] = machine.cpu_regs.pc;
 			break;
 		case clrscr:
 			debug_opcode("clrscr");
