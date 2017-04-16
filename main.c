@@ -199,6 +199,8 @@ uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize)
 	}
 
 mnemonic_out:
+		debug_args(&local_dst, &src);
+
 		return src;
 }
 
@@ -263,28 +265,24 @@ static void cpu_decode_instruction(uint32_t *instr)
 		case mov:
 			debug_opcode("mov");
 			src = decode_mnemonic(instr, &dst, SIZE_BYTE);
-			debug_args(&src, dst);
 			if (!machine.cpu_regs.exception)
 				*dst = src;
 			break;
 		case movi:
 			debug_opcode("movi");
 			src = decode_mnemonic(instr, &dst, SIZE_INT);
-			debug_args(&src, dst);
 			if (!machine.cpu_regs.exception)
 				*dst = src;
 			break;
 		case add:
 			debug_opcode("add");
 			src = decode_mnemonic(instr, &dst,SIZE_BYTE);
-			debug_args(&src, dst);
 			if (!machine.cpu_regs.exception)
 				*dst += src;
 			break;
 		case sub:
 			debug_opcode("sub");
 			src = decode_mnemonic(instr, &dst,SIZE_BYTE);
-			debug_args(&src, dst);
 			if (!machine.cpu_regs.exception)
 				*dst -= src;
 			break;
