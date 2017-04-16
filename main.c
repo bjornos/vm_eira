@@ -400,20 +400,20 @@ static void cpu_exception(long pc) {
 
 	switch(machine.cpu_regs.exception) {
 	case EXC_INSTR:
-			printf("illegal instruction 0x%X ",
+			printf("illegal instruction 0x%X\n",
 				machine.RAM[pc]);
 			break;
 	case EXC_MEM:
-			printf("cannot access memory ");
+			printf("cannot access memory\n");
 			break;
 	case EXC_REG:
-			printf("cannot access register ");
+			printf("cannot access register\n");
 			break;
 	case EXC_PRG:
-			printf("stray program ");
+			printf("stray program\n");
 			break;
 	default:
-			printf("unknown exception %d",
+			printf("unknown exception %d\n",
 				machine.cpu_regs.exception);
 			break;
 	}
