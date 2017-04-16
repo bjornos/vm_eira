@@ -55,7 +55,8 @@ enum conditions {
 
 typedef struct {
 	int debug;
-	int regression;
+	int machine_check;
+	char *load_program;
 } args_t;
 
 struct _cpu_regs {
@@ -76,7 +77,8 @@ static struct _machine {
 
 static struct argp_option opts[] = {
 	{"debug", 'd', 0, OPTION_ARG_OPTIONAL, "Enable debug"},
-	{"regression", 'r', "test", OPTION_ARG_OPTIONAL, "Run regression test program"},
+	{"check", 'c', 0, OPTION_ARG_OPTIONAL, "Run machine check"},
+	{"program", 'p', "FILE", OPTION_ARG_OPTIONAL, "Load program"},
 	{0}
 };
 
@@ -103,8 +105,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 		case 'd':
 			args->debug = 1;
 			break;
-		case 'r':
-			args->regression = 1;
+		case 'c':
+			args->machine_check = 1;
+			break;
+		case 'p':
+			args->load_program = arg;
 			break;
 		default:
 			return ARGP_ERR_UNKNOWN;
@@ -442,13 +447,12 @@ __inline__ static long cpu_fetch_instruction(void){
 int main(int argc,char *argv[])
 {
 	long instr_p;
-	int *run_test_prg = &args.regression;
-	int *debug = &args.debug;
 	struct argp argp = {opts, parse_opt, args_doc, doc};
 
 	signal(SIGINT, sig_handler);
 
-	args.debug = args.regression = 0;
+	args.debug = args.machine_check = 0;
+	args.load_program = NULL;
 
 	argp_parse(&argp,argc,argv,0,0,&args);
 
@@ -457,9 +461,11 @@ int main(int argc,char *argv[])
 
 	cpu_load_program("bin/eira_rom.bin", MEM_START_ROM);
 
-	if (*run_test_prg)
-		//cpu_load_program("bin/eira_test.bin", MEM_START_PRG);
+	if (args.machine_check)
 		cpu_load_program_local(program_regression_test, MEM_START_PRG);
+
+	if (args.load_program)
+		cpu_load_program(args.load_program, MEM_START_PRG);
 
 	while(!machine.cpu_regs.panic) {
 		instr_p = cpu_fetch_instruction();
@@ -471,7 +477,7 @@ int main(int argc,char *argv[])
 		if (machine.display.refresh)
 			display_retrace(&machine.display, machine.RAM);
 
-		if (*debug) {
+		if (args.debug) {
 			gotoxy(1,5);
 			dump_instr(machine.dbg_info, dbg_index);
 			gotoxy(1,5 + DBG_HISTORY + 4);
@@ -479,7 +485,7 @@ int main(int argc,char *argv[])
 		}
 	}
 
-	if (*run_test_prg) {
+	if (args.machine_check) {
 		test_result(machine.cpu_regs.GP_REG, machine.RAM);
 		printf("\n%s: all tests OK.\n",__func__);
 	}
