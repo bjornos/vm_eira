@@ -57,6 +57,8 @@ typedef struct {
 	int debug;
 	int machine_check;
 	char *load_program;
+	int dump_ram;
+	int dump_size;
 } args_t;
 
 struct _cpu_regs {
@@ -79,6 +81,10 @@ static struct argp_option opts[] = {
 	{"debug", 'd', 0, OPTION_ARG_OPTIONAL, "Enable debug"},
 	{"check", 'c', 0, OPTION_ARG_OPTIONAL, "Run machine check"},
 	{"program", 'p', "FILE", OPTION_ARG_OPTIONAL, "Load program"},
+	{"dump-ram", 'r', "RAM ADDRESS", OPTION_ARG_OPTIONAL,
+		"Dump RAM at machine shutdown"},
+	{"dump-size", 's', "RAM DUMP SIZE", OPTION_ARG_OPTIONAL,
+		"Number of RAM Bytes to dump (default 32)"},
 	{0}
 };
 
@@ -110,6 +116,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 		case 'p':
 			args->load_program = arg;
+			break;
+		case 'r':
+			args->dump_ram = atoi(arg);
+			break;
+		case 's':
+			args->dump_size = atoi(arg);
 			break;
 		default:
 			return ARGP_ERR_UNKNOWN;
@@ -451,8 +463,9 @@ int main(int argc,char *argv[])
 
 	signal(SIGINT, sig_handler);
 
-	args.debug = args.machine_check = 0;
+	args.debug = args.machine_check = args.dump_ram = 0;
 	args.load_program = NULL;
+	args.dump_size = DUMP_RAM_SIZE_DEFAULT;
 
 	argp_parse(&argp,argc,argv,0,0,&args);
 
@@ -484,6 +497,9 @@ int main(int argc,char *argv[])
 			dump_regs(machine.cpu_regs.GP_REG);
 		}
 	}
+
+	if (args.dump_ram)
+		dump_ram(machine.RAM, args.dump_ram, args.dump_ram + args.dump_size);
 
 	if (args.machine_check) {
 		test_result(machine.cpu_regs.GP_REG, machine.RAM);
