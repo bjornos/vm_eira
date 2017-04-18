@@ -25,7 +25,7 @@
 #include "opcodes.h"
 
 #define DBG_HISTORY 8 /* fixme: program argument instead */
-
+#define DUMP_RAM_SIZE_DEFAULT 32
 struct _dbg {
 	uint32_t instr;
 	char opcode[OPCODE_NAME_MAX];
