@@ -36,14 +36,14 @@ enum display_adapter_capabilities {
 	display_getc,
 	display_clr,
 };
-/*
-enum display_modes {
-	display_40x12,
-	display_80x25,
-	display_320x240,
-	display_640x480
-};
-*/
+
+typedef enum {
+	mode_40x12,
+	mode_80x25,
+	mode_320x240,
+} display_mode;
+
+
 struct _display_adapter {
  	uint8_t *mem;
  	uint16_t x;
@@ -53,12 +53,12 @@ struct _display_adapter {
 	int mode;
 };
 
-void display_retrace(struct _display_adapter *display,  uint8_t machine_ram[]);
+void display_retrace(struct _display_adapter *display);
 
 int display_request(struct _display_adapter *display, uint32_t *instr,
-		int request, uint8_t machine_ram[]);
+		int request);
 
-void display_init(struct _display_adapter *display, uint8_t machine_ram[]);
+void display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode mode);
 
 
 

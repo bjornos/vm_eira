@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <argp.h>
 #include <signal.h>
+#include <time.h>
 
 #include "opcodes.h"
 #include "display.h"
@@ -349,15 +350,15 @@ static void cpu_decode_instruction(uint32_t *instr)
 			break;
 		case clrscr:
 			debug_opcode("clrscr");
-			display_request(&machine.display, instr, display_clr, machine.RAM);
+			display_request(&machine.display, instr, display_clr);
 			break;
 		case setposxy:
 			debug_opcode("setposxy");
-			display_request(&machine.display, instr, display_setxy, machine.RAM);
+			display_request(&machine.display, instr, display_setxy);
 			break;
 		case putchar:
 			debug_opcode("putchar");
-			display_request(&machine.display, instr, display_setc, machine.RAM);
+			display_request(&machine.display, instr, display_setc);
 			break;
 		default: machine.cpu_regs.exception = EXC_INSTR;
 			break;
@@ -470,7 +471,8 @@ int main(int argc,char *argv[])
 	argp_parse(&argp,argc,argv,0,0,&args);
 
 	cpu_reset();
-	display_init(&machine.display, machine.RAM);
+
+	display_init(&machine.display, machine.RAM, mode_40x12);
 
 	cpu_load_program("bin/eira_rom.bin", MEM_START_ROM);
 
@@ -488,7 +490,7 @@ int main(int argc,char *argv[])
 			cpu_exception(instr_p);
 
 		if (machine.display.refresh)
-			display_retrace(&machine.display, machine.RAM);
+			display_retrace(&machine.display);
 
 		if (args.debug) {
 			gotoxy(1,5);
@@ -496,6 +498,8 @@ int main(int argc,char *argv[])
 			gotoxy(1,5 + DBG_HISTORY + 4);
 			dump_regs(machine.cpu_regs.GP_REG);
 		}
+
+		nanosleep((const struct timespec[]){{0, 100000000L}}, NULL); /* 100ms */
 	}
 
 	if (args.dump_ram)
