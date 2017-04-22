@@ -45,7 +45,7 @@ void test_result(uint16_t *GP_REG, uint8_t *RAM) {
 	assert(*(GP_REG + 7) == *(GP_REG + 8));
 }
 
-uint32_t program_regression_test[] = {
+const uint32_t program_regression_test[] = {
 	PRG_MAGIC_HEADER,	/* magic */
 	(1 << 0),		/* reserved */
 	(1 << 0),		/* reserved */

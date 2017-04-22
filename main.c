@@ -420,7 +420,7 @@ static void cpu_load_program(const char filename[], uint16_t addr) {
 	fclose(prog);
 }
 
-static __inline__ void cpu_load_program_local(uint32_t *prg, uint16_t addr) {
+static __inline__ void cpu_load_program_local(const uint32_t *prg, uint16_t addr) {
 		memcpy(&machine.RAM[addr], prg + 4, 1024);
 }
 
