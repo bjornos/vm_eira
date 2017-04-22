@@ -70,16 +70,21 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 	return ret;
 }
 
-void display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode this_mode)
+int display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode this_mode)
 {
 	display->x = 0;
 	display->y = 0;
 	display->c = '\0';
-	display->mode = this_mode;
+
+	if (this_mode < mode_unknown)
+		display->mode = this_mode;
+	else
+		return EXC_DISP;
 
 	display->mem = machine_ram + MEM_START_DISPLAY;
 	memset(display->mem, 0x00, adapter_mode[display->mode].resolution);
 	display->refresh = 0;
 	display->enabled = 1;
 
+	return EXC_NONE;
 }

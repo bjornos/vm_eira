@@ -42,6 +42,7 @@ enum display_adapter_capabilities {
 typedef enum {
 	mode_40x12,
 	mode_80x25,
+	mode_unknown,
 } display_mode;
 
 
@@ -62,7 +63,7 @@ void display_wait_retrace(struct _display_adapter *display);
 int display_request(struct _display_adapter *display, uint32_t *instr,
 		int request);
 
-void display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode mode);
+int display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode mode);
 
 
 

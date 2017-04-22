@@ -352,7 +352,8 @@ static void cpu_decode_instruction(uint32_t *instr)
 		case dimd:
 			debug_opcode("dimd");
 			display_wait_retrace(&machine.display);
-			display_init(&machine.display, machine.RAM, mode_40x12);
+			machine.cpu_regs.exception =
+			display_init(&machine.display, machine.RAM, (*instr >> 8));
 			break;
 		case diclr:
 			debug_opcode("diclr");
