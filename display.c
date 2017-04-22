@@ -14,13 +14,14 @@ struct _adapter_mode {
 static const struct _adapter_mode adapter_mode[] = {
 	{mode_40x12, 40, 12, 40*12},
 	{mode_80x25, 80, 25, 80*25},
-	{mode_320x240, 320, 240, 320*240},
 };
 
 
 void display_retrace(struct _display_adapter *display)
 {
 	int cx,cy,addr;
+
+	display->refresh = 1;
 
 	for(cy=0; cy < adapter_mode[display->mode].horizontal; cy++) {
 		addr = (cy * adapter_mode[display->mode].vertical);
@@ -30,8 +31,13 @@ void display_retrace(struct _display_adapter *display)
 			addr++;
 		}
 	}
+
 	display->refresh = 0;
-;
+}
+
+void display_wait_retrace(struct _display_adapter *display)
+{
+	while(display->refresh);
 }
 
 int display_request(struct _display_adapter *display, uint32_t *instr,
@@ -39,6 +45,9 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 {
 	int addr = 0;
 	int ret = EXC_NONE;
+
+	if (!display->enabled)
+		return EXC_DISP;
 
 	switch(request) {
 		case display_setxy:
@@ -53,7 +62,6 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 			break;
 		case display_clr:
 			memset(&display->mem[0], ' ', adapter_mode[display->mode].resolution);
-			display->refresh = 1;
 			break;
 		default:
 			ret = EXC_DISP;
@@ -72,5 +80,6 @@ void display_init(struct _display_adapter *display, uint8_t *machine_ram, displa
 	display->mem = machine_ram + MEM_START_DISPLAY;
 	memset(display->mem, 0x00, adapter_mode[display->mode].resolution);
 	display->refresh = 0;
+	display->enabled = 1;
 
 }

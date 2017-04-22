@@ -218,6 +218,47 @@ enum exceptions {
 */
 #define stopc		0x14
 
+/**
+ * instruction: display mode
+ *
+ * syntax: dimd [mode]
+ *
+ * mode:
+ * 0x01: 40x12
+ * 0x02: 80x25
+ *
+ *
+ * | 0000 1100 | 0000 0000 | 0000 0000 0000 0000 |
+ * 0           8           16                   31
+ *    instr        mode         reserved
+ */
+#define dimd		0x30
+
+/**
+ * instruction: display wait retrace
+ *
+ * syntax: diwtrt
+ *
+ * wait for display retrace
+ *
+ * | 1000 1100 | 0000 0000 0000 0000 0000 0000 |
+ * 0           8                               31
+ *    instr               reserved
+ */
+#define diwtrt		0x31
+
+/**
+ * instruction: display clear
+ *
+ * syntax: diclr
+ *
+ * clear display adapter memory
+ *
+ * | 0100 1100 | 0000 0000 0000 0000 0000 0000 |
+ * 0           8                              31
+ *    instr               reserved
+ */
+#define diclr		0x32
 
 /*
  * instructions below are experimental
@@ -225,10 +266,7 @@ enum exceptions {
  *
  */
 
-/* no args */
-#define clrscr		0xf0
-
-/*
+/**
  * instruction: setposxy
  *
  * set cursor/pixelpos at x,y

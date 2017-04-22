@@ -50,7 +50,7 @@ uint32_t program_regression_test[] = {
 	(1 << 0),		/* reserved */
 	(1 << 0),		/* reserved */
 	(112 << 0),		/* code size  */
-	(clrscr << 0),
+	(diclr << 0),
 	(setposxy << 0) | 10  << 8 | (1 << 20),
 	(putchar << 0) | ('T' << 8),
 	(setposxy << 0) | 11  << 8 | (1 << 20),

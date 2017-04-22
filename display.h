@@ -29,6 +29,8 @@
 #define display_clear() printf("\033[H\033[J")
 #define gotoxy(x,y) printf("\033[%d;%dH", (y), (x))
 
+#define DISPLAY_FRAME_RATE	50	/* 50Hz*/
+
 enum display_adapter_capabilities {
 	display_setxy,
 	display_getxy,
@@ -40,7 +42,6 @@ enum display_adapter_capabilities {
 typedef enum {
 	mode_40x12,
 	mode_80x25,
-	mode_320x240,
 } display_mode;
 
 
@@ -51,9 +52,12 @@ struct _display_adapter {
 	char c;
 	int refresh;
 	int mode;
+	int enabled;
 };
 
 void display_retrace(struct _display_adapter *display);
+
+void display_wait_retrace(struct _display_adapter *display);
 
 int display_request(struct _display_adapter *display, uint32_t *instr,
 		int request);

@@ -25,9 +25,10 @@
 #include "opcodes.h"
 #include "registers.h"
 #include "prg.h"
+#include "display.h"
 
 const uint32_t program_reset[] = {
-	(jmp << 0) | (MEM_START_ROM << 8),
+	(jmp << 0) | ((MEM_START_ROM + 4) << 8),
 	(nop << 0),
 	(halt << 0),
 };
@@ -37,7 +38,9 @@ const uint32_t rom[] = {
 	(1 << 0),		/* reserved */
 	(1 << 0),		/* reserved */
 	(126 << 0),		/* program size  */
-	(clrscr << 0),
+	(dimd << 0) | (mode_40x12 << 8),
+	(diwtrt << 0),
+	(diclr << 0),
 	(setposxy << 0) | 10  << 8 | (1 << 20),
 	(putchar << 0) | ('e' << 8),
 	(setposxy << 0) | 11  << 8 | (1 << 20),

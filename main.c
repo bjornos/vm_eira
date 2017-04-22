@@ -26,6 +26,7 @@
 #include <argp.h>
 #include <signal.h>
 #include <time.h>
+#include <pthread.h>
 
 #include "opcodes.h"
 #include "display.h"
@@ -348,9 +349,19 @@ static void cpu_decode_instruction(uint32_t *instr)
 			debug_result(&machine.cpu_regs.pc);
 			machine.cpu_regs.GP_REG[(*instr >> 8)] = machine.cpu_regs.pc;
 			break;
-		case clrscr:
-			debug_opcode("clrscr");
-			display_request(&machine.display, instr, display_clr);
+		case dimd:
+			debug_opcode("dimd");
+			display_wait_retrace(&machine.display);
+			display_init(&machine.display, machine.RAM, mode_40x12);
+			break;
+		case diclr:
+			debug_opcode("diclr");
+			machine.cpu_regs.exception =
+				display_request(&machine.display, instr, display_clr);
+			break;
+		case diwtrt:
+			debug_opcode("diwtrt");
+			display_wait_retrace(&machine.display);
 			break;
 		case setposxy:
 			debug_opcode("setposxy");
@@ -418,20 +429,23 @@ static void cpu_exception(long pc) {
 
 	switch(machine.cpu_regs.exception) {
 	case EXC_INSTR:
-			printf("illegal instruction 0x%X\n",
+			printf("illegal instruction 0x%X ",
 				machine.RAM[pc]);
 			break;
 	case EXC_MEM:
-			printf("cannot access memory\n");
+			printf("cannot access memory ");
 			break;
 	case EXC_REG:
-			printf("cannot access register\n");
+			printf("cannot access register ");
 			break;
 	case EXC_PRG:
-			printf("stray program\n");
+			printf("stray program ");
+			break;
+	case EXC_DISP:
+			printf("display error ");
 			break;
 	default:
-			printf("unknown exception %d\n",
+			printf("unknown exception %d ",
 				machine.cpu_regs.exception);
 			break;
 	}
@@ -456,11 +470,31 @@ __inline__ static long cpu_fetch_instruction(void){
 	return machine.cpu_regs.pc;
 }
 
+void *machine_display(void *arg)
+{
+	struct timespec frame_rate;
+	int fps = DISPLAY_FRAME_RATE;
+
+	frame_rate.tv_nsec = 1000000000 / fps;
+	frame_rate.tv_sec = 0;
+
+	while(!machine.cpu_regs.panic) {
+		if (machine.display.enabled)
+			display_retrace(&machine.display);
+		nanosleep(&frame_rate, NULL);
+	}
+
+	pthread_exit(NULL);
+}
+
 
 int main(int argc,char *argv[])
 {
 	long instr_p;
 	struct argp argp = {opts, parse_opt, args_doc, doc};
+	pthread_t display;
+	void *status;
+	int display_id;
 
 	signal(SIGINT, sig_handler);
 
@@ -472,9 +506,10 @@ int main(int argc,char *argv[])
 
 	cpu_reset();
 
-	display_init(&machine.display, machine.RAM, mode_40x12);
+	machine.display.enabled = 0;
+	display_id = pthread_create(&display, NULL, machine_display, NULL);
 
-	cpu_load_program("bin/eira_rom.bin", MEM_START_ROM);
+	cpu_load_program_local(rom, MEM_START_ROM);
 
 	if (args.machine_check)
 		cpu_load_program_local(program_regression_test, MEM_START_PRG);
@@ -489,14 +524,14 @@ int main(int argc,char *argv[])
 		if (machine.cpu_regs.exception)
 			cpu_exception(instr_p);
 
-		if (machine.display.refresh)
-			display_retrace(&machine.display);
-
 		if (args.debug) {
-			gotoxy(1,5);
+			display_wait_retrace(&machine.display);
+			machine.display.enabled = 0;
+			gotoxy(1,15);
 			dump_instr(machine.dbg_info, dbg_index);
-			gotoxy(1,5 + DBG_HISTORY + 4);
+			gotoxy(1,15 + DBG_HISTORY + 4);
 			dump_regs(machine.cpu_regs.GP_REG);
+			machine.display.enabled = 1;
 		}
 
 		nanosleep((const struct timespec[]){{0, 100000000L}}, NULL); /* 100ms */
@@ -509,6 +544,9 @@ int main(int argc,char *argv[])
 		test_result(machine.cpu_regs.GP_REG, machine.RAM);
 		printf("\n%s: all tests OK.\n",__func__);
 	}
+
+	pthread_join(display_id, &status);
+	pthread_exit(NULL);
 
 	return 0;
 }
