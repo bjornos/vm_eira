@@ -353,7 +353,7 @@ static void cpu_decode_instruction(uint32_t *instr)
 			debug_opcode("dimd");
 			display_wait_retrace(&machine.display);
 			machine.cpu_regs.exception =
-			display_init(&machine.display, machine.RAM, (*instr >> 8));
+				display_init(&machine.display, machine.RAM, (*instr >> 8));
 			break;
 		case diclr:
 			debug_opcode("diclr");
