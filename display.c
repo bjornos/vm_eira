@@ -40,6 +40,11 @@ void display_wait_retrace(struct _display_adapter *display)
 	while(display->refresh);
 }
 
+void display_reset(struct _display_adapter *display)
+{
+	display->enabled = 0;
+}
+
 int display_request(struct _display_adapter *display, uint32_t *instr,
 		int request)
 {

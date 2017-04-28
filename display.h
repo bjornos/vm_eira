@@ -63,6 +63,8 @@ void display_wait_retrace(struct _display_adapter *display);
 int display_request(struct _display_adapter *display, uint32_t *instr,
 		int request);
 
+void display_reset(struct _display_adapter *display);
+
 int display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode mode);
 
 

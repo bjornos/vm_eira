@@ -44,6 +44,11 @@ enum op_size {
 	SIZE_INT,
 };
 
+typedef enum {
+	RESET_HARD,
+	RESET_SOFT
+} reset_t;
+
 enum conditions {
 	COND_EQ = 1,
 	COND_NEQ = 2,
@@ -69,6 +74,8 @@ struct _cpu_regs {
 	int sp;				/* stack pointer */
 	int cr;				/* conditional register */
 	char exception;
+	unsigned char reset;
+	unsigned char dbg;	/* enable debug mode */
 	unsigned char panic;		/* halt cpu */
 };
 
@@ -370,6 +377,7 @@ static void cpu_decode_instruction(uint32_t *instr)
 			break;
 		case putchar:
 			debug_opcode("putchar");
+			display_wait_retrace(&machine.display);
 			display_request(&machine.display, instr, display_setc);
 			break;
 		default: machine.cpu_regs.exception = EXC_INSTR;
@@ -386,11 +394,12 @@ static void cpu_reset(void) {
 		memset(&machine.dbg_info[d], 0x00, sizeof(struct _dbg));
 	dbg_index = 0;
 
-	machine.cpu_regs.pc = 0;
+	machine.cpu_regs.reset = 1;
 	machine.cpu_regs.sp = 0;
 	machine.cpu_regs.exception = 0;
 	machine.cpu_regs.panic = 0;
 	machine.cpu_regs.cr = COND_UNDEF;
+	machine.cpu_regs.dbg = 0;
 
 	machine.cpu_regs.pc = MEM_START_ROM - sizeof(uint32_t);
 
@@ -398,7 +407,7 @@ static void cpu_reset(void) {
 }
 
 
-static void cpu_load_program(const char filename[], uint16_t addr) {
+static void machine_load_program(const char filename[], uint16_t addr) {
 	FILE *prog;
 	struct _prg_format program;
 
@@ -421,7 +430,7 @@ static void cpu_load_program(const char filename[], uint16_t addr) {
 	fclose(prog);
 }
 
-static __inline__ void cpu_load_program_local(const uint32_t *prg, uint16_t addr) {
+static __inline__ void machine_load_program_local(const uint32_t *prg, uint16_t addr) {
 		memcpy(&machine.RAM[addr], prg + 4, 1024);
 }
 
@@ -488,14 +497,46 @@ void *machine_display(void *arg)
 	pthread_exit(NULL);
 }
 
+void *machine_cpu(void *arg)
+{
+	struct timespec cpu_clk_freq;
+	long instr_p;
+	int hz = 10; /* 10 Hz */
+
+	cpu_clk_freq.tv_nsec = 1000000000 / hz;
+	cpu_clk_freq.tv_sec = 0;
+
+	while(!machine.cpu_regs.panic) {
+		while(machine.cpu_regs.reset);
+
+		instr_p = cpu_fetch_instruction();
+		cpu_decode_instruction((uint32_t *)&machine.RAM[instr_p]);
+
+		if (machine.cpu_regs.exception)
+			cpu_exception(instr_p);
+
+		if (machine.cpu_regs.dbg) {
+			display_wait_retrace(&machine.display);
+			machine.display.enabled = 0;
+			gotoxy(1,15);
+			dump_instr(machine.dbg_info, dbg_index);
+			gotoxy(1,15 + DBG_HISTORY + 4);
+			dump_regs(machine.cpu_regs.GP_REG);
+			machine.display.enabled = 1;
+		}
+
+		nanosleep(&cpu_clk_freq, NULL);
+	}
+
+	pthread_exit(NULL);
+}
 
 int main(int argc,char *argv[])
 {
-	long instr_p;
 	struct argp argp = {opts, parse_opt, args_doc, doc};
-	pthread_t display;
+	pthread_t display, cpu;
+	int display_id, cpu_id;
 	void *status;
-	int display_id;
 
 	signal(SIGINT, sig_handler);
 
@@ -506,37 +547,26 @@ int main(int argc,char *argv[])
 	argp_parse(&argp,argc,argv,0,0,&args);
 
 	cpu_reset();
+	display_reset(&machine.display);
 
-	machine.display.enabled = 0;
+	cpu_id = pthread_create(&cpu, NULL, machine_cpu, NULL);
 	display_id = pthread_create(&display, NULL, machine_display, NULL);
 
-	cpu_load_program_local(rom, MEM_START_ROM);
+	machine_load_program_local(rom, MEM_START_ROM);
 
 	if (args.machine_check)
-		cpu_load_program_local(program_regression_test, MEM_START_PRG);
+		machine_load_program_local(program_regression_test, MEM_START_PRG);
+	else if (args.load_program)
+		machine_load_program(args.load_program, MEM_START_PRG);
 
-	if (args.load_program)
-		cpu_load_program(args.load_program, MEM_START_PRG);
+	if (args.debug)
+		machine.cpu_regs.dbg = 1;
 
-	while(!machine.cpu_regs.panic) {
-		instr_p = cpu_fetch_instruction();
-		cpu_decode_instruction((uint32_t *)&machine.RAM[instr_p]);
+	/* release CPU */
+	machine.cpu_regs.reset = 0;
 
-		if (machine.cpu_regs.exception)
-			cpu_exception(instr_p);
-
-		if (args.debug) {
-			display_wait_retrace(&machine.display);
-			machine.display.enabled = 0;
-			gotoxy(1,15);
-			dump_instr(machine.dbg_info, dbg_index);
-			gotoxy(1,15 + DBG_HISTORY + 4);
-			dump_regs(machine.cpu_regs.GP_REG);
-			machine.display.enabled = 1;
-		}
-
-		nanosleep((const struct timespec[]){{0, 100000000L}}, NULL); /* 100ms */
-	}
+	pthread_join(cpu, &status);
+	pthread_join(display, &status);
 
 	if (args.dump_ram)
 		dump_ram(machine.RAM, args.dump_ram, args.dump_ram + args.dump_size);
@@ -546,7 +576,6 @@ int main(int argc,char *argv[])
 		printf("\n%s: all tests OK.\n",__func__);
 	}
 
-	pthread_join(display_id, &status);
 	pthread_exit(NULL);
 
 	return 0;
