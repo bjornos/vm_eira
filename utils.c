@@ -20,9 +20,37 @@
  */
 
 #include <assert.h>
+#include <string.h>
 #include "utils.h"
 #include "registers.h"
 #include "display.h"
+
+
+
+void debug_opcode(struct _dbg *dbg, int index, const char op[])
+{
+	memset(dbg[index].opcode, '\0', 16);
+	strncpy(dbg[index].opcode, op, strlen(op));
+}
+
+void debug_instr(struct _dbg *dbg, int index, uint32_t *instr)
+{
+	dbg[index].instr = *instr;
+}
+
+void debug_result(struct _dbg *dbg, int index, long *res)
+{
+	dbg[index].op_result = *res;
+}
+
+void debug_args(struct _dbg *dbg, int index, uint16_t *arg1,uint16_t *arg2)
+{
+	if (arg1)
+		dbg[index].op_arg1 = *arg1;
+	if (arg2)
+		dbg[index].op_arg2 = *arg2;
+}
+
 
 void dump_instr(struct _dbg *dbg, int dbg_index)
 {

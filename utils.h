@@ -26,6 +26,7 @@
 
 #define DBG_HISTORY 8 /* fixme: program argument instead */
 #define DUMP_RAM_SIZE_DEFAULT 32
+
 struct _dbg {
 	uint32_t instr;
 	char opcode[OPCODE_NAME_MAX];
@@ -33,6 +34,14 @@ struct _dbg {
 	uint16_t op_arg2;
 	long op_result;
 };
+
+void debug_opcode(struct _dbg *dbg, int index, const char op[]);
+
+void debug_instr(struct _dbg *dbg, int index, uint32_t *instr);
+
+void debug_result(struct _dbg *dbg, int index, long *res);
+
+void debug_args(struct _dbg *dbg, int index, uint16_t *arg1,uint16_t *arg2);
 
 void dump_instr(struct _dbg *dbg, int dbg_index);
 

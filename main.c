@@ -139,28 +139,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	return 0;
 }
 
-static __inline__ void debug_opcode(const char op[])
-{
-	memset(machine.dbg_info[dbg_index].opcode, '\0', 16);
-	strncpy(machine.dbg_info[dbg_index].opcode, op, strlen(op));
-}
-static __inline__ void debug_instr(uint32_t *instr)
-{
-	machine.dbg_info[dbg_index].instr = *instr;
-}
-static __inline__ void debug_result(long *res)
-{
-	machine.dbg_info[dbg_index].op_result = *res;
-}
-static __inline__ void debug_args(uint16_t *arg1,uint16_t *arg2)
-{
-	if (arg1)
-		machine.dbg_info[dbg_index].op_arg1 = *arg1;
-	if (arg2)
-		machine.dbg_info[dbg_index].op_arg2 = *arg2;
-}
-
-
 uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize)
 {
 	uint16_t local_src;
@@ -225,7 +203,7 @@ uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize)
 	}
 
 mnemonic_out:
-		debug_args(&local_dst, &src);
+		debug_args(machine.dbg_info, dbg_index, &local_dst, &src);
 
 		return src;
 }
@@ -237,7 +215,7 @@ static __inline__ void compare(uint16_t c1, uint16_t c2)
 
 	DBG(printf("%s --- ",__func__));
 
-	debug_args((uint16_t*)&c1, (uint16_t*)&c1);
+	debug_args(machine.dbg_info, dbg_index, (uint16_t*)&c1, (uint16_t*)&c1);
 
 	machine.cpu_regs.cr =
 			(d == 0) ? (COND_EQ | COND_ZERO) :
@@ -245,7 +223,7 @@ static __inline__ void compare(uint16_t c1, uint16_t c2)
 			(d < 0) ? (COND_LE | COND_NEQ) :
 			COND_UNDEF;
 
-	debug_result((long*)&machine.cpu_regs.cr);
+	debug_result(machine.dbg_info, dbg_index, (long*)&machine.cpu_regs.cr);
 	DBG(printf("c1:%d c2:%d d:%d desc: %d\n",c1,c2,d,machine.cpu_regs.cr));
 }
 
@@ -254,13 +232,13 @@ static __inline__ void branch(enum conditions cond, uint16_t addr)
 {
 	DBG(printf("%s ?: ",__func__));
 
-	debug_args((uint16_t*)&machine.cpu_regs.cr, (uint16_t*)&cond);
+	debug_args(machine.dbg_info, dbg_index, (uint16_t*)&machine.cpu_regs.cr, (uint16_t*)&cond);
 
 
 	if (machine.cpu_regs.cr & cond) {
 		machine.cpu_regs.pc = addr - sizeof(uint32_t);
 	}
-	debug_result(&machine.cpu_regs.pc);
+	debug_result(machine.dbg_info, dbg_index, &machine.cpu_regs.pc);
 	machine.cpu_regs.cr = COND_UNDEF;
 }
 
@@ -276,57 +254,57 @@ static void cpu_decode_instruction(uint32_t *instr)
 
 	DBG(printf("%s 0x%x\n",__func__, *instr));
 
-	debug_instr(instr);
+	debug_instr(machine.dbg_info, dbg_index, instr);
 
 	opcode = *instr & 0xff;
 
 	switch(opcode) {
 		case nop:
-			debug_opcode("nop");
+			debug_opcode(machine.dbg_info, dbg_index, "nop");
 			break;
 		case halt:
-			debug_opcode("halt");
+			debug_opcode(machine.dbg_info, dbg_index, "halt");
 			machine.cpu_regs.panic = 1;
 			break;
 		case mov:
-			debug_opcode("mov");
+			debug_opcode(machine.dbg_info, dbg_index, "mov");
 			src = decode_mnemonic(instr, &dst, SIZE_BYTE);
 			if (!machine.cpu_regs.exception)
 				*dst = src;
 			break;
 		case movi:
-			debug_opcode("movi");
+			debug_opcode(machine.dbg_info, dbg_index, "movi");
 			src = decode_mnemonic(instr, &dst, SIZE_INT);
 			if (!machine.cpu_regs.exception)
 				*dst = src;
 			break;
 		case add:
-			debug_opcode("add");
+			debug_opcode(machine.dbg_info, dbg_index, "add");
 			src = decode_mnemonic(instr, &dst,SIZE_BYTE);
 			if (!machine.cpu_regs.exception)
 				*dst += src;
 			break;
 		case sub:
-			debug_opcode("sub");
+			debug_opcode(machine.dbg_info, dbg_index, "sub");
 			src = decode_mnemonic(instr, &dst,SIZE_BYTE);
 			if (!machine.cpu_regs.exception)
 				*dst -= src;
 			break;
 		case jmp:
-			debug_opcode("jmp");
+			debug_opcode(machine.dbg_info, dbg_index, "jmp");
 			machine.cpu_regs.pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
-			debug_result(&machine.cpu_regs.pc);
+			debug_result(machine.dbg_info, dbg_index, &machine.cpu_regs.pc);
 			break;
 		case cmp:
-			debug_opcode("cmp");
+			debug_opcode(machine.dbg_info, dbg_index, "cmp");
 			machine.cpu_regs.cr &= COND_UNDEF;
 			src = decode_mnemonic(instr, &dst, SIZE_INT);
 			compare(src, *dst);
-			debug_args(&src, dst);
-			debug_result((long *)&machine.cpu_regs.cr);
+			debug_args(machine.dbg_info, dbg_index, &src, dst);
+			debug_result(machine.dbg_info, dbg_index, (long *)&machine.cpu_regs.cr);
 			break;
 		case breq:
-			debug_opcode("breq");
+			debug_opcode(machine.dbg_info, dbg_index, "breq");
 			addr = (*instr >> 16);
 			if (addr > MEM_START_ROM)
 				branch(COND_EQ, (*instr >> 16));
@@ -338,7 +316,7 @@ static void cpu_decode_instruction(uint32_t *instr)
 			}
 			break;
 		case brneq:
-			debug_opcode("brneq");
+			debug_opcode(machine.dbg_info, dbg_index, "brneq");
 			addr = (*instr >> 16);
 			if (addr > MEM_START_ROM)
 				branch(COND_NEQ, (*instr >> 16));
@@ -350,33 +328,33 @@ static void cpu_decode_instruction(uint32_t *instr)
 			}
 			break;
 		case stopc:
-			debug_opcode("stopc");
+			debug_opcode(machine.dbg_info, dbg_index, "stopc");
 			addr = (*instr >> 8);
-			debug_args(&addr, NULL);
-			debug_result(&machine.cpu_regs.pc);
+			debug_args(machine.dbg_info, dbg_index, &addr, NULL);
+			debug_result(machine.dbg_info, dbg_index, &machine.cpu_regs.pc);
 			machine.cpu_regs.GP_REG[(*instr >> 8)] = machine.cpu_regs.pc;
 			break;
 		case dimd:
-			debug_opcode("dimd");
+			debug_opcode(machine.dbg_info, dbg_index, "dimd");
 			display_wait_retrace(&machine.display);
 			machine.cpu_regs.exception =
 				display_init(&machine.display, machine.RAM, (*instr >> 8));
 			break;
 		case diclr:
-			debug_opcode("diclr");
+			debug_opcode(machine.dbg_info, dbg_index, "diclr");
 			machine.cpu_regs.exception =
 				display_request(&machine.display, instr, display_clr);
 			break;
 		case diwtrt:
-			debug_opcode("diwtrt");
+			debug_opcode(machine.dbg_info, dbg_index, "diwtrt");
 			display_wait_retrace(&machine.display);
 			break;
 		case setposxy:
-			debug_opcode("setposxy");
+			debug_opcode(machine.dbg_info, dbg_index, "setposxy");
 			display_request(&machine.display, instr, display_setxy);
 			break;
 		case putchar:
-			debug_opcode("putchar");
+			debug_opcode(machine.dbg_info, dbg_index, "putchar");
 			display_wait_retrace(&machine.display);
 			display_request(&machine.display, instr, display_setc);
 			break;
