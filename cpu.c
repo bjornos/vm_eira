@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "cpu.h"
 #include "exception.h"
@@ -36,3 +37,17 @@ void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr) {
 
 	cpu_regs->panic = 1;
 }
+
+void cpu_reset(struct _cpu_regs *cpu_regs, uint32_t reset_vector) {
+	memset(cpu_regs->GP_REG, 0x00, GP_REG_MAX);
+
+	cpu_regs->reset = 1;
+	cpu_regs->sp = 0;
+	cpu_regs->exception = EXC_NONE;
+	cpu_regs->panic = 0;
+	cpu_regs->cr = COND_UNDEF;
+	cpu_regs->dbg = 0;
+
+	cpu_regs->pc = reset_vector;
+}
+

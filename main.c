@@ -39,7 +39,7 @@
 #include "utils.h"
 
 #define DBG(x)
-#define CPU_VERSION	0x1
+#define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
 
 enum op_size {
 	SIZE_BYTE,
@@ -50,16 +50,6 @@ typedef enum {
 	RESET_HARD,
 	RESET_SOFT
 } reset_t;
-
-enum conditions {
-	COND_EQ = 1,
-	COND_NEQ = 2,
-	COND_ZERO = 4,
-	COND_NZERO = 8,
-	COND_GR = 16,
-	COND_LE = 32,
-	COND_UNDEF = 64,
-};
 
 
 typedef struct {
@@ -355,22 +345,16 @@ static void cpu_decode_instruction(uint32_t *instr)
 }
 
 
-static void cpu_reset(void) {
+static void machine_reset(void) {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
-	memset(&machine.cpu_regs.GP_REG, 0x00, GP_REG_MAX);
 
 	for (int d=0; d < DBG_HISTORY; d++)
 		memset(&machine.dbg_info[d], 0x00, sizeof(struct _dbg));
 	dbg_index = 0;
 
-	machine.cpu_regs.reset = 1;
-	machine.cpu_regs.sp = 0;
-	machine.cpu_regs.exception = EXC_NONE;
-	machine.cpu_regs.panic = 0;
-	machine.cpu_regs.cr = COND_UNDEF;
-	machine.cpu_regs.dbg = 0;
+	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
 
-	machine.cpu_regs.pc = MEM_START_ROM - sizeof(uint32_t);
+	display_reset(&machine.display);
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 }
@@ -473,7 +457,6 @@ int main(int argc,char *argv[])
 {
 	struct argp argp = {opts, parse_opt, args_doc, doc};
 	pthread_t display, cpu;
-	int display_id, cpu_id;
 	void *status;
 
 	signal(SIGINT, sig_handler);
@@ -484,11 +467,10 @@ int main(int argc,char *argv[])
 
 	argp_parse(&argp,argc,argv,0,0,&args);
 
-	cpu_reset();
-	display_reset(&machine.display);
+	machine_reset();
 
-	cpu_id = pthread_create(&cpu, NULL, machine_cpu, NULL);
-	display_id = pthread_create(&display, NULL, machine_display, NULL);
+	pthread_create(&cpu, NULL, machine_cpu, NULL);
+	pthread_create(&display, NULL, machine_display, NULL);
 
 	machine_load_program_local(rom, MEM_START_ROM);
 
