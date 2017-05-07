@@ -2,7 +2,7 @@
 #include <time.h>
 #include "display.h"
 #include "memory.h"
-#include "opcodes.h"
+#include "exception.h"
 
 struct _adapter_mode {
 	display_mode name;

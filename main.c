@@ -29,8 +29,10 @@
 #include <pthread.h>
 
 #include "opcodes.h"
+#include "cpu.h"
 #include "display.h"
 #include "memory.h"
+#include "exception.h"
 #include "testprogram.h"
 #include "prg.h"
 #include "rom.h"
@@ -68,16 +70,6 @@ typedef struct {
 	int dump_size;
 } args_t;
 
-struct _cpu_regs {
-	uint16_t GP_REG[GP_REG_MAX];	/* general purpose registers */
-	long pc;			/* program counter */
-	int sp;				/* stack pointer */
-	int cr;				/* conditional register */
-	char exception;
-	unsigned char reset;
-	unsigned char dbg;	/* enable debug mode */
-	unsigned char panic;		/* halt cpu */
-};
 
 static struct _machine {
 	uint8_t RAM[RAM_SIZE];
@@ -106,7 +98,7 @@ static int dbg_index = 0;
 void sig_handler(int signo)
 {
 	if (signo == SIGINT) {
-		machine.cpu_regs.panic = 1;
+		machine.cpu_regs.exception = EXC_SHUTDOWN;
 		args.debug = 1;
 	}
 }
@@ -207,7 +199,6 @@ mnemonic_out:
 
 		return src;
 }
-
 
 static __inline__ void compare(uint16_t c1, uint16_t c2)
 {
@@ -374,7 +365,7 @@ static void cpu_reset(void) {
 
 	machine.cpu_regs.reset = 1;
 	machine.cpu_regs.sp = 0;
-	machine.cpu_regs.exception = 0;
+	machine.cpu_regs.exception = EXC_NONE;
 	machine.cpu_regs.panic = 0;
 	machine.cpu_regs.cr = COND_UNDEF;
 	machine.cpu_regs.dbg = 0;
@@ -412,41 +403,8 @@ static __inline__ void machine_load_program_local(const uint32_t *prg, uint16_t 
 		memcpy(&machine.RAM[addr], prg + 4, 1024);
 }
 
-static void cpu_exception(long pc) {
-	printf("!! %s: ",__func__);
-
-	switch(machine.cpu_regs.exception) {
-	case EXC_INSTR:
-			printf("illegal instruction 0x%X ",
-				machine.RAM[pc]);
-			break;
-	case EXC_MEM:
-			printf("cannot access memory ");
-			break;
-	case EXC_REG:
-			printf("cannot access register ");
-			break;
-	case EXC_PRG:
-			printf("stray program ");
-			break;
-	case EXC_DISP:
-			printf("display error ");
-			break;
-	default:
-			printf("unknown exception %d ",
-				machine.cpu_regs.exception);
-			break;
-	}
-
-	printf("[pc: %ld]\n", machine.cpu_regs.pc);
-
-	machine.cpu_regs.panic = 1;
-}
-
 
 __inline__ static long cpu_fetch_instruction(void){
-	machine.cpu_regs.exception = 0;
-
 	/* each instruction is 4 bytes */
 	machine.cpu_regs.pc += sizeof(uint32_t);
 	if (machine.cpu_regs.pc >= (RAM_SIZE - 3))
@@ -490,8 +448,10 @@ void *machine_cpu(void *arg)
 		instr_p = cpu_fetch_instruction();
 		cpu_decode_instruction((uint32_t *)&machine.RAM[instr_p]);
 
-		if (machine.cpu_regs.exception)
-			cpu_exception(instr_p);
+		if (machine.cpu_regs.exception) {
+			display_wait_retrace(&machine.display);
+			cpu_handle_exception(&machine.cpu_regs, (uint32_t *)&machine.RAM[instr_p]);
+		}
 
 		if (machine.cpu_regs.dbg) {
 			display_wait_retrace(&machine.display);
