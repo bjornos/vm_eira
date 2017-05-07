@@ -1,0 +1,7 @@
+cpu.o
+display.o
+exception.h
+main.o
+utils.o
+vm_eira
+
