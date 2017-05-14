@@ -25,6 +25,12 @@
 #include <stdint.h>
 
 #include "registers.h"
+#include "display.h"
+
+enum op_size {
+	SIZE_BYTE,
+	SIZE_INT,
+};
 
 enum conditions {
 	COND_EQ = 1,
@@ -47,9 +53,13 @@ struct _cpu_regs {
 	unsigned char panic;		/* halt cpu */
 };
 
+void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display, uint32_t *instr);
+
 void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr);
 
 void cpu_reset(struct _cpu_regs *cpu_regs, uint32_t reset_vector);
+
+long cpu_fetch_instruction(struct _cpu_regs *cpu_regs);
 
 
 #endif /* __CPU_H__ */

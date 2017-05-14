@@ -41,10 +41,6 @@
 #define DBG(x)
 #define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
 
-enum op_size {
-	SIZE_BYTE,
-	SIZE_INT,
-};
 
 typedef enum {
 	RESET_HARD,
@@ -83,7 +79,7 @@ static struct argp_option opts[] = {
 static char* doc = "";
 static char* args_doc = "";
 static args_t args;
-static int dbg_index = 0;
+//static int dbg_index = 0;
 
 void sig_handler(int signo)
 {
@@ -121,236 +117,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	return 0;
 }
 
-uint16_t decode_mnemonic(uint32_t *instr, uint16_t **dst, int opsize)
-{
-	uint16_t local_src;
-	uint16_t local_dst;
-	uint16_t src;
-
-	/* value destination general purpose register */
-	if (*instr & OP_DST_REG) {
-		local_dst = (*instr >> 8) & 0x0f;
-		local_src = (*instr >> 16) & 0xffff;
-
-		*(dst) = machine.cpu_regs.GP_REG + local_dst;
-
-		if (*instr & OP_SRC_REG) {
-			/* value from register */
-			DBG(printf("GP_REG%d -> GP_REG%d\n",local_src, local_dst));
-			if (local_src > GP_REG_MAX) {
-				machine.cpu_regs.exception = EXC_REG;
-				goto mnemonic_out;
-			}
-			src = machine.cpu_regs.GP_REG[local_src];
-			goto mnemonic_out;
-		}
-		if (*instr & OP_SRC_MEM) {
-			/* copy from memory */
-			DBG(printf("0x%x -> GP_REG%d\n",local_src,local_dst));
-			if (local_src > RAM_SIZE) {
-				machine.cpu_regs.exception = EXC_MEM;
-				goto mnemonic_out;
-			}
-			if (opsize == SIZE_INT) {
-				src = machine.RAM[local_src];
-				src |= machine.RAM[local_src + 1] << 8;
-			} else
-				src = machine.RAM[local_src];
-
-			DBG(printf("RAM SRC = 0x%x  opsize=%d\n",src,opsize));
-			goto mnemonic_out;
-		}
-		/* immediate value */
-		DBG(printf("%d -> GP_REG%d\n",local_src,local_dst));
-		src = local_src;
-		goto mnemonic_out;
-	}
-
-	/* value destination memory */
-	if (*instr & OP_DST_MEM) {
-		local_src = (*instr >> 8) & 0x0f;
-		local_dst = (*instr >> 16) & 0xffff;
-		DBG(printf("GP_REG%d -> @%d\n",local_src,local_dst));
-
-		if (local_dst > RAM_SIZE) {
-			machine.cpu_regs.exception = EXC_MEM;
-			goto mnemonic_out;
-		}
-
-		*(dst) = (void*)machine.RAM + local_dst;
-		if (opsize == SIZE_INT)
-			src = machine.cpu_regs.GP_REG[local_src] & 0xffff;
-		else
-			src = machine.cpu_regs.GP_REG[local_src] & 0xff;
-	}
-
-mnemonic_out:
-		debug_args(machine.dbg_info, dbg_index, &local_dst, &src);
-
-		return src;
-}
-
-static __inline__ void compare(uint16_t c1, uint16_t c2)
-{
-	int d = c2 - c1;
-
-	DBG(printf("%s --- ",__func__));
-
-	debug_args(machine.dbg_info, dbg_index, (uint16_t*)&c1, (uint16_t*)&c1);
-
-	machine.cpu_regs.cr =
-			(d == 0) ? (COND_EQ | COND_ZERO) :
-			(d > 0) ? (COND_GR | COND_NEQ) :
-			(d < 0) ? (COND_LE | COND_NEQ) :
-			COND_UNDEF;
-
-	debug_result(machine.dbg_info, dbg_index, (long*)&machine.cpu_regs.cr);
-	DBG(printf("c1:%d c2:%d d:%d desc: %d\n",c1,c2,d,machine.cpu_regs.cr));
-}
-
-
-static __inline__ void branch(enum conditions cond, uint16_t addr)
-{
-	DBG(printf("%s ?: ",__func__));
-
-	debug_args(machine.dbg_info, dbg_index, (uint16_t*)&machine.cpu_regs.cr, (uint16_t*)&cond);
-
-
-	if (machine.cpu_regs.cr & cond) {
-		machine.cpu_regs.pc = addr - sizeof(uint32_t);
-	}
-	debug_result(machine.dbg_info, dbg_index, &machine.cpu_regs.pc);
-	machine.cpu_regs.cr = COND_UNDEF;
-}
-
-static void cpu_decode_instruction(uint32_t *instr)
-{
-	uint8_t opcode;
-	uint16_t src;
-	uint16_t *dst;
-	uint16_t addr;
-
-	if (machine.cpu_regs.exception)
-		return;
-
-	DBG(printf("%s 0x%x\n",__func__, *instr));
-
-	debug_instr(machine.dbg_info, dbg_index, instr);
-
-	opcode = *instr & 0xff;
-
-	switch(opcode) {
-		case nop:
-			debug_opcode(machine.dbg_info, dbg_index, "nop");
-			break;
-		case halt:
-			debug_opcode(machine.dbg_info, dbg_index, "halt");
-			machine.cpu_regs.panic = 1;
-			break;
-		case mov:
-			debug_opcode(machine.dbg_info, dbg_index, "mov");
-			src = decode_mnemonic(instr, &dst, SIZE_BYTE);
-			if (!machine.cpu_regs.exception)
-				*dst = src;
-			break;
-		case movi:
-			debug_opcode(machine.dbg_info, dbg_index, "movi");
-			src = decode_mnemonic(instr, &dst, SIZE_INT);
-			if (!machine.cpu_regs.exception)
-				*dst = src;
-			break;
-		case add:
-			debug_opcode(machine.dbg_info, dbg_index, "add");
-			src = decode_mnemonic(instr, &dst,SIZE_BYTE);
-			if (!machine.cpu_regs.exception)
-				*dst += src;
-			break;
-		case sub:
-			debug_opcode(machine.dbg_info, dbg_index, "sub");
-			src = decode_mnemonic(instr, &dst,SIZE_BYTE);
-			if (!machine.cpu_regs.exception)
-				*dst -= src;
-			break;
-		case jmp:
-			debug_opcode(machine.dbg_info, dbg_index, "jmp");
-			machine.cpu_regs.pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
-			debug_result(machine.dbg_info, dbg_index, &machine.cpu_regs.pc);
-			break;
-		case cmp:
-			debug_opcode(machine.dbg_info, dbg_index, "cmp");
-			machine.cpu_regs.cr &= COND_UNDEF;
-			src = decode_mnemonic(instr, &dst, SIZE_INT);
-			compare(src, *dst);
-			debug_args(machine.dbg_info, dbg_index, &src, dst);
-			debug_result(machine.dbg_info, dbg_index, (long *)&machine.cpu_regs.cr);
-			break;
-		case breq:
-			debug_opcode(machine.dbg_info, dbg_index, "breq");
-			addr = (*instr >> 16);
-			if (addr > MEM_START_ROM)
-				branch(COND_EQ, (*instr >> 16));
-			else {
-				if (addr > GP_REG_MAX)
-					machine.cpu_regs.exception = EXC_INSTR;
-				else
-					branch(COND_EQ, machine.cpu_regs.GP_REG[addr]);
-			}
-			break;
-		case brneq:
-			debug_opcode(machine.dbg_info, dbg_index, "brneq");
-			addr = (*instr >> 16);
-			if (addr > MEM_START_ROM)
-				branch(COND_NEQ, (*instr >> 16));
-			else {
-				if (addr > GP_REG_MAX)
-					machine.cpu_regs.exception = EXC_INSTR;
-				else
-					branch(COND_NEQ, machine.cpu_regs.GP_REG[addr]);
-			}
-			break;
-		case stopc:
-			debug_opcode(machine.dbg_info, dbg_index, "stopc");
-			addr = (*instr >> 8);
-			debug_args(machine.dbg_info, dbg_index, &addr, NULL);
-			debug_result(machine.dbg_info, dbg_index, &machine.cpu_regs.pc);
-			machine.cpu_regs.GP_REG[(*instr >> 8)] = machine.cpu_regs.pc;
-			break;
-		case dimd:
-			debug_opcode(machine.dbg_info, dbg_index, "dimd");
-			display_wait_retrace(&machine.display);
-			machine.cpu_regs.exception =
-				display_init(&machine.display, machine.RAM, (*instr >> 8));
-			break;
-		case diclr:
-			debug_opcode(machine.dbg_info, dbg_index, "diclr");
-			machine.cpu_regs.exception =
-				display_request(&machine.display, instr, display_clr);
-			break;
-		case diwtrt:
-			debug_opcode(machine.dbg_info, dbg_index, "diwtrt");
-			display_wait_retrace(&machine.display);
-			break;
-		case setposxy:
-			debug_opcode(machine.dbg_info, dbg_index, "setposxy");
-			display_request(&machine.display, instr, display_setxy);
-			break;
-		case putchar:
-			debug_opcode(machine.dbg_info, dbg_index, "putchar");
-			display_wait_retrace(&machine.display);
-			display_request(&machine.display, instr, display_setc);
-			break;
-		default: machine.cpu_regs.exception = EXC_INSTR;
-			break;
-	}
-}
 
 
 static void machine_reset(void) {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
-
-	for (int d=0; d < DBG_HISTORY; d++)
-		memset(&machine.dbg_info[d], 0x00, sizeof(struct _dbg));
-	dbg_index = 0;
 
 	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
 
@@ -388,14 +158,14 @@ static __inline__ void machine_load_program_local(const uint32_t *prg, uint16_t 
 }
 
 
-__inline__ static long cpu_fetch_instruction(void){
+__inline__ static long cpu_fetch_instruction_old(void){
 	/* each instruction is 4 bytes */
 	machine.cpu_regs.pc += sizeof(uint32_t);
 	if (machine.cpu_regs.pc >= (RAM_SIZE - 3))
 		machine.cpu_regs.exception = EXC_PRG;
 
-	dbg_index = (dbg_index + 1) % DBG_HISTORY;
-	memset(&machine.dbg_info[dbg_index], 0x00, sizeof(struct _dbg));
+	//dbg_index = (dbg_index + 1) % DBG_HISTORY;
+	//memset(&machine.dbg_info[dbg_index], 0x00, sizeof(struct _dbg));
 
 	return machine.cpu_regs.pc;
 }
@@ -429,22 +199,12 @@ void *machine_cpu(void *arg)
 	while(!machine.cpu_regs.panic) {
 		while(machine.cpu_regs.reset);
 
-		instr_p = cpu_fetch_instruction();
-		cpu_decode_instruction((uint32_t *)&machine.RAM[instr_p]);
+		instr_p = cpu_fetch_instruction(&machine.cpu_regs);
+		cpu_decode_instruction(&machine.cpu_regs, machine.RAM, &machine.display, (uint32_t *)&machine.RAM[instr_p]);
 
 		if (machine.cpu_regs.exception) {
 			display_wait_retrace(&machine.display);
 			cpu_handle_exception(&machine.cpu_regs, (uint32_t *)&machine.RAM[instr_p]);
-		}
-
-		if (machine.cpu_regs.dbg) {
-			display_wait_retrace(&machine.display);
-			machine.display.enabled = 0;
-			gotoxy(1,15);
-			dump_instr(machine.dbg_info, dbg_index);
-			gotoxy(1,15 + DBG_HISTORY + 4);
-			dump_regs(machine.cpu_regs.GP_REG);
-			machine.display.enabled = 1;
 		}
 
 		nanosleep(&cpu_clk_freq, NULL);
