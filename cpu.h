@@ -53,7 +53,7 @@ struct _cpu_regs {
 	unsigned char panic;		/* halt cpu */
 };
 
-void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display, uint32_t *instr);
+void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display);
 
 void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr);
 

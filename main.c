@@ -38,9 +38,7 @@
 #include "rom.h"
 #include "utils.h"
 
-#define DBG(x)
 #define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
-
 
 typedef enum {
 	RESET_HARD,
@@ -61,7 +59,6 @@ static struct _machine {
 	uint8_t RAM[RAM_SIZE];
 	struct _cpu_regs cpu_regs;
 	struct _display_adapter display;
-	struct _dbg dbg_info[DBG_HISTORY];
 } machine;
 
 static struct argp_option opts[] = {
@@ -79,7 +76,6 @@ static struct argp_option opts[] = {
 static char* doc = "";
 static char* args_doc = "";
 static args_t args;
-//static int dbg_index = 0;
 
 void sig_handler(int signo)
 {
@@ -129,7 +125,6 @@ static void machine_reset(void) {
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 }
 
-
 static void machine_load_program(const char filename[], uint16_t addr) {
 	FILE *prog;
 	struct _prg_format program;
@@ -153,22 +148,10 @@ static void machine_load_program(const char filename[], uint16_t addr) {
 	fclose(prog);
 }
 
-static __inline__ void machine_load_program_local(const uint32_t *prg, uint16_t addr) {
+__inline__ static void machine_load_program_local(const uint32_t *prg, uint16_t addr) {
 		memcpy(&machine.RAM[addr], prg + 4, 1024);
 }
 
-
-__inline__ static long cpu_fetch_instruction_old(void){
-	/* each instruction is 4 bytes */
-	machine.cpu_regs.pc += sizeof(uint32_t);
-	if (machine.cpu_regs.pc >= (RAM_SIZE - 3))
-		machine.cpu_regs.exception = EXC_PRG;
-
-	//dbg_index = (dbg_index + 1) % DBG_HISTORY;
-	//memset(&machine.dbg_info[dbg_index], 0x00, sizeof(struct _dbg));
-
-	return machine.cpu_regs.pc;
-}
 
 void *machine_display(void *arg)
 {
@@ -200,7 +183,7 @@ void *machine_cpu(void *arg)
 		while(machine.cpu_regs.reset);
 
 		instr_p = cpu_fetch_instruction(&machine.cpu_regs);
-		cpu_decode_instruction(&machine.cpu_regs, machine.RAM, &machine.display, (uint32_t *)&machine.RAM[instr_p]);
+		cpu_decode_instruction(&machine.cpu_regs, machine.RAM, &machine.display);
 
 		if (machine.cpu_regs.exception) {
 			display_wait_retrace(&machine.display);

@@ -124,15 +124,18 @@ mnemonic_out:
 		return src;
 }
 
-void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display, uint32_t *instr)
+void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display)
 {
 	uint8_t opcode;
+	uint32_t *instr;
 	uint16_t src;
 	uint16_t *dst;
 	uint16_t addr;
 
 	if (cpu_regs->exception)
 		return;
+
+	instr = (uint32_t *)&RAM[cpu_regs->pc];
 
 	debug_instr(dbg_info, dbg_index, instr);
 
