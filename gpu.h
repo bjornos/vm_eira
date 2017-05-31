@@ -19,18 +19,31 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __EXCEPTION_H_
-#define __EXCEPTION_H_
+#ifndef __GPU_H__
+#define __GPU_H__
 
-enum exceptions {
-	EXC_NONE,
-	EXC_INSTR,
-	EXC_MEM,
-	EXC_REG,
-	EXC_PRG,
-	EXC_DISP,
-	EXC_GPU,
-	EXC_SHUTDOWN,
+#include <stdint.h>
+#include "display.h"
+
+#define GPU_INSTR_BUFFER_SIZE	16
+
+struct _gpu {
+	uint8_t *frame_buffer;
+	uint32_t instr_list[GPU_INSTR_BUFFER_SIZE]; /* todo: map to RAM */
+	int instr_list_pos;
+	int instr_ptr;
+	int exception;
+	unsigned char instr_lock;
+	unsigned char reset;
 };
 
-#endif /*__EXCEPTION_H_  */
+void gpu_fetch_instr(struct _gpu *gpu);
+
+void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display, uint8_t *RAM);
+
+void gpu_add_instr(struct _gpu *gpu, uint32_t *instr);
+
+void gpu_reset(struct _gpu *gpu);
+
+
+#endif /* __GPU_H__ */

@@ -2,5 +2,6 @@ cpu.o
 display.o
 main.o
 utils.o
+gpu.o
 vm_eira
 

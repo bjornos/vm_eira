@@ -19,8 +19,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPCODES_H_
-#define OPCODES_H_
+#ifndef __OPCODES_H__
+#define __OPCODES_H__
 
 #define OPCODE_NAME_MAX	16
 
@@ -210,6 +210,19 @@
 #define stopc		0x14
 
 /**
+ * instruction: display wait
+ *
+ * syntax: diwait
+ *
+ * Basically a nop for the GPU
+ *
+ * | 0000 1100 | 0000 0000 | 0000 0000 0000 0000 |
+ * 0           8           16                   31
+ *    instr        mode         reserved
+ */
+#define diwait		0x30
+
+/**
  * instruction: display mode
  *
  * syntax: dimd [mode]
@@ -219,11 +232,11 @@
  * 0x02: 80x25
  *
  *
- * | 0000 1100 | 0000 0000 | 0000 0000 0000 0000 |
+ * | 1000 1100 | 0000 0000 | 0000 0000 0000 0000 |
  * 0           8           16                   31
  *    instr        mode         reserved
  */
-#define dimd		0x30
+#define dimd		0x31
 
 /**
  * instruction: display wait retrace
@@ -232,11 +245,11 @@
  *
  * wait for display retrace
  *
- * | 1000 1100 | 0000 0000 0000 0000 0000 0000 |
+ * | 0100 1100 | 0000 0000 0000 0000 0000 0000 |
  * 0           8                               31
  *    instr               reserved
  */
-#define diwtrt		0x31
+#define diwtrt		0x32
 
 /**
  * instruction: display clear
@@ -249,7 +262,7 @@
  * 0           8                              31
  *    instr               reserved
  */
-#define diclr		0x32
+#define diclr		0x33
 
 /*
  * instructions below are experimental
@@ -293,4 +306,4 @@
  */
 #define putchar		0xf3
 
-#endif /* OPCODES_H_ */
+#endif /* __OPCODES_H__ */

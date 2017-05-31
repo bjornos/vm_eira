@@ -48,6 +48,7 @@ struct _cpu_regs {
 	int sp;				/* stack pointer */
 	int cr;				/* conditional register */
 	char exception;
+	unsigned char gpu_request;
 	unsigned char reset;
 	unsigned char dbg;	/* enable debug mode */
 	unsigned char panic;		/* halt cpu */

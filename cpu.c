@@ -218,41 +218,25 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 			cpu_regs->GP_REG[(*instr >> 8)] = cpu_regs->pc;
 			break;
 		case dimd:
-			debug_opcode(dbg_info, dbg_index, "dimd");
-			display_wait_retrace(display);
-			cpu_regs->exception =
-				display_init(display, RAM, (*instr >> 8)); /* fixme: display_request(init) */
-			break;
 		case diclr:
-			debug_opcode(dbg_info, dbg_index, "diclr");
-			cpu_regs->exception =
-				display_request(display, instr, display_clr);
-			break;
 		case diwtrt:
-			debug_opcode(dbg_info, dbg_index, "diwtrt");
-			display_wait_retrace(display);
-			break;
 		case setposxy:
-			debug_opcode(dbg_info, dbg_index, "setposxy");
-			display_request(display, instr, display_setxy);
-			break;
 		case putchar:
-			debug_opcode(dbg_info, dbg_index, "putchar");
-			display_wait_retrace(display);
-			display_request(display, instr, display_setc);
+			debug_opcode(dbg_info, dbg_index, "<gpu code>");
+			cpu_regs->gpu_request = 1;
 			break;
 		default: cpu_regs->exception = EXC_INSTR;
 			break;
 	}
 
 	if (cpu_regs->dbg) {
-		display_wait_retrace(display);
-		display->enabled = 0;
+		//display_wait_retrace(display);
+		//display->enabled = 0;
 		gotoxy(1,15);
 		dump_instr(dbg_info, dbg_index);
 		gotoxy(1,15 + DBG_HISTORY + 4);
 		dump_regs(cpu_regs->GP_REG);
-		display->enabled = 1; /* fixme: bug*/
+		//display->enabled = 1; /* fixme: bug*/
 	}
 
 }
@@ -274,6 +258,7 @@ void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr) {
 			printf("stray program ");
 			break;
 	case EXC_DISP:
+	case EXC_GPU:
 			printf("display error ");
 			break;
 	case EXC_SHUTDOWN:
@@ -299,6 +284,8 @@ long cpu_fetch_instruction(struct _cpu_regs *cpu_regs) {
 	dbg_index = (dbg_index + 1) % DBG_HISTORY;
 	memset(dbg_info + dbg_index, 0x00, sizeof(struct _dbg));
 
+	cpu_regs->gpu_request = 0;
+
 	return cpu_regs->pc;
 }
 
@@ -311,6 +298,7 @@ void cpu_reset(struct _cpu_regs *cpu_regs, uint32_t reset_vector) {
 	cpu_regs->panic = 0;
 	cpu_regs->cr = COND_UNDEF;
 	cpu_regs->dbg = 0;
+	cpu_regs->gpu_request = 0;
 
 	cpu_regs->pc = reset_vector;
 

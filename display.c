@@ -21,6 +21,10 @@ void display_retrace(struct _display_adapter *display)
 {
 	int cx,cy,addr;
 
+	if (!display->mem)
+		//throw_exception(display);
+		printf("No display mem!\n");
+
 	display->refresh = 1;
 
 	for(cy=0; cy < adapter_mode[display->mode].horizontal; cy++) {

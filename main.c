@@ -30,6 +30,7 @@
 
 #include "opcodes.h"
 #include "cpu.h"
+#include "gpu.h"
 #include "display.h"
 #include "memory.h"
 #include "exception.h"
@@ -58,6 +59,7 @@ typedef struct {
 static struct _machine {
 	uint8_t RAM[RAM_SIZE];
 	struct _cpu_regs cpu_regs;
+	struct _gpu gpu;
 	struct _display_adapter display;
 } machine;
 
@@ -120,7 +122,9 @@ static void machine_reset(void) {
 
 	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
 
-	display_reset(&machine.display);
+	gpu_reset(&machine.gpu);
+
+	display_reset(&machine.display); // fixme: move into gpu reset
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 }
@@ -149,7 +153,7 @@ static void machine_load_program(const char filename[], uint16_t addr) {
 }
 
 __inline__ static void machine_load_program_local(const uint32_t *prg, uint16_t addr) {
-		memcpy(&machine.RAM[addr], prg + 4, 1024);
+	memcpy(&machine.RAM[addr], prg + 4, 1024);
 }
 
 
@@ -170,6 +174,35 @@ void *machine_display(void *arg)
 	pthread_exit(NULL);
 }
 
+
+void *machine_gpu(void *arg)
+{
+	struct timespec gpu_clk_freq;
+	int hz = 10; /* 10 Hz */
+
+	gpu_clk_freq.tv_nsec = 1000000000 / hz;
+	gpu_clk_freq.tv_sec = 0;
+
+	while(!machine.cpu_regs.panic) {
+
+		while(machine.gpu.reset);
+
+		gpu_fetch_instr(&machine.gpu);
+
+		machine.cpu_regs.exception = machine.gpu.exception;
+
+		gpu_decode_instr(&machine.gpu, &machine.display, machine.RAM);
+
+		nanosleep(&gpu_clk_freq, NULL);
+	}
+
+	//for (int i=0; i<16;i++);
+	//	printf("gpu instr list %d: 0x%x\n",i,machine.gpu.instr_list[i]);
+
+	pthread_exit(NULL);
+}
+
+
 void *machine_cpu(void *arg)
 {
 	struct timespec cpu_clk_freq;
@@ -185,6 +218,10 @@ void *machine_cpu(void *arg)
 		instr_p = cpu_fetch_instruction(&machine.cpu_regs);
 		cpu_decode_instruction(&machine.cpu_regs, machine.RAM, &machine.display);
 
+		if (machine.cpu_regs.gpu_request)  {
+			gpu_add_instr(&machine.gpu, (uint32_t *)&machine.RAM[instr_p]);
+		}
+
 		if (machine.cpu_regs.exception) {
 			display_wait_retrace(&machine.display);
 			cpu_handle_exception(&machine.cpu_regs, (uint32_t *)&machine.RAM[instr_p]);
@@ -199,7 +236,7 @@ void *machine_cpu(void *arg)
 int main(int argc,char *argv[])
 {
 	struct argp argp = {opts, parse_opt, args_doc, doc};
-	pthread_t display, cpu;
+	pthread_t display, cpu, gpu;
 	void *status;
 
 	signal(SIGINT, sig_handler);
@@ -213,6 +250,7 @@ int main(int argc,char *argv[])
 	machine_reset();
 
 	pthread_create(&cpu, NULL, machine_cpu, NULL);
+	pthread_create(&gpu, NULL, machine_gpu, NULL);
 	pthread_create(&display, NULL, machine_display, NULL);
 
 	machine_load_program_local(rom, MEM_START_ROM);
@@ -225,10 +263,12 @@ int main(int argc,char *argv[])
 	if (args.debug)
 		machine.cpu_regs.dbg = 1;
 
-	/* release CPU */
+	/* release CPU & GPU */
+	machine.gpu.reset = 0;
 	machine.cpu_regs.reset = 0;
 
 	pthread_join(cpu, &status);
+	pthread_join(gpu, &status);
 	pthread_join(display, &status);
 
 	if (args.dump_ram)

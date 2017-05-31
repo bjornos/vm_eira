@@ -31,6 +31,12 @@
 
 #define DISPLAY_FRAME_RATE	50	/* 50Hz*/
 
+struct _cursor_data {
+	uint16_t x;
+	uint16_t y;
+	char face;
+};
+
 enum display_adapter_capabilities {
 	display_setxy,
 	display_getxy,
