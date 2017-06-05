@@ -75,13 +75,13 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
 			break;
 		case dimd:
 			gpu_exception =
-				display_request(display, &instr, gpu->frame_buffer, display_init);
+				display_request(display, &instr, gpu->frame_buffer, DISPLAY_INIT);
 			//debug_opcode(dbg_info, dbg_index, "dimd");
 			break;
  		case diclr:
 			//debug_opcode(dbg_info, dbg_index, "diclr");
 			gpu_exception =
-				display_request(display, &instr, gpu->frame_buffer, display_clr);
+				display_request(display, &instr, gpu->frame_buffer, DISPLAY_CLR);
 			break;
 		case diwtrt:
 			//debug_opcode(dbg_info, dbg_index, "diwtrt");
@@ -89,12 +89,12 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
 			break;
 		case setposxy:
 			//debug_opcode(dbg_info, dbg_index, "setposxy");
-			display_request(display, &instr, gpu->frame_buffer, display_setxy);
+			display_request(display, &instr, gpu->frame_buffer, DISPLAY_SETXY);
 			break;
 		case putchar:
 			//debug_opcode(dbg_info, dbg_index, "putchar");
 			display_wait_retrace(display);
-			display_request(display, &instr, gpu->frame_buffer, display_setc);
+			display_request(display, &instr, gpu->frame_buffer, DISPLAY_SETC);
 			break;
 
 		default:

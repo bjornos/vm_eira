@@ -38,12 +38,12 @@ struct _cursor_data {
 };
 
 enum display_adapter_capabilities {
-	display_init,
-	display_setxy,
-	display_getxy,
-	display_setc,
-	display_getc,
-	display_clr,
+	DISPLAY_INIT,
+	DISPLAY_SETXY,
+	DISPLAY_GETXY,
+	DISPLAY_SETC,
+	DISPLAY_GETC,
+	DISPLAY_CLR,
 };
 
 typedef enum {

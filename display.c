@@ -73,25 +73,25 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 	int addr = 0;
 	int ret = EXC_NONE;
 
-	if (!display->enabled && (request != display_init))
+	if (!display->enabled && (request != DISPLAY_INIT))
 		return EXC_DISP;
 
 	switch(request) {
-		case display_init:
+		case DISPLAY_INIT:
 			display_wait_retrace(display);
 			ret =
 				display_set_mode(display, frame_buffer, (*instr >> 8));
 			break;
-		case display_setxy:
+		case DISPLAY_SETXY:
 			display->x = (*instr >> 8) & 0xfff;
 			display->y = (*instr >> 20) & 0xfff;
 			break;
-		case display_setc:
+		case DISPLAY_SETC:
 			addr = (display->y * adapter_mode[display->mode].vertical) + display->x;
 			display->c = (*instr >> 8) & 0xff;
 			*(frame_buffer + addr) = display->c;
 			break;
-		case display_clr:
+		case DISPLAY_CLR:
 			memset(&frame_buffer[0], ' ', adapter_mode[display->mode].resolution);
 			break;
 		default:
