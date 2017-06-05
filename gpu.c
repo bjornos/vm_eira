@@ -24,6 +24,7 @@
 #include "gpu.h"
 #include "opcodes.h"
 #include "exception.h"
+#include "memory.h"
 
 #define GPU_DBG(x) x
 
@@ -54,7 +55,7 @@ void gpu_fetch_instr(struct _gpu *gpu)
 	gpu_unlock(gpu);
 }
 
-void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display, uint8_t *RAM)
+void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
 {
 	uint32_t instr;
 	uint8_t opcode;
@@ -73,15 +74,14 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display, uint8_
 		case diwait:
 			break;
 		case dimd:
-			//debug_opcode(dbg_info, dbg_index, "dimd");
-			display_wait_retrace(display);
 			gpu_exception =
-				display_init(display, RAM, (instr >> 8)); /* fixme: display_request(init) */
+				display_request(display, &instr, gpu->frame_buffer, display_init);
+			//debug_opcode(dbg_info, dbg_index, "dimd");
 			break;
  		case diclr:
 			//debug_opcode(dbg_info, dbg_index, "diclr");
 			gpu_exception =
-				display_request(display, &instr, display_clr);
+				display_request(display, &instr, gpu->frame_buffer, display_clr);
 			break;
 		case diwtrt:
 			//debug_opcode(dbg_info, dbg_index, "diwtrt");
@@ -89,12 +89,12 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display, uint8_
 			break;
 		case setposxy:
 			//debug_opcode(dbg_info, dbg_index, "setposxy");
-			display_request(display, &instr, display_setxy);
+			display_request(display, &instr, gpu->frame_buffer, display_setxy);
 			break;
 		case putchar:
 			//debug_opcode(dbg_info, dbg_index, "putchar");
 			display_wait_retrace(display);
-			display_request(display, &instr, display_setc);
+			display_request(display, &instr, gpu->frame_buffer, display_setc);
 			break;
 
 		default:
@@ -121,14 +121,14 @@ void gpu_add_instr(struct _gpu *gpu, uint32_t *instr)
 	gpu_unlock(gpu);
 }
 
-void gpu_reset(struct _gpu *gpu)
+void gpu_reset(struct _gpu *gpu, uint8_t *RAM)
 {
 	gpu->reset = 1;
 
 	gpu_lock(gpu);
 
-	// todo: map mem
-	// todo: map instr mem
+	gpu->frame_buffer = RAM + MEM_START_GPU_FB;
+
 	for (int i=0; i<GPU_INSTR_BUFFER_SIZE; i++)
 		gpu->instr_list[i] = diwait;
 

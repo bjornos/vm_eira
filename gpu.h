@@ -29,7 +29,7 @@
 
 struct _gpu {
 	uint8_t *frame_buffer;
-	uint32_t instr_list[GPU_INSTR_BUFFER_SIZE]; /* todo: map to RAM */
+	uint32_t instr_list[GPU_INSTR_BUFFER_SIZE];
 	int instr_list_pos;
 	int instr_ptr;
 	int exception;
@@ -39,11 +39,11 @@ struct _gpu {
 
 void gpu_fetch_instr(struct _gpu *gpu);
 
-void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display, uint8_t *RAM);
+void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display);
 
 void gpu_add_instr(struct _gpu *gpu, uint32_t *instr);
 
-void gpu_reset(struct _gpu *gpu);
+void gpu_reset(struct _gpu *gpu, uint8_t *RAM);
 
 
 #endif /* __GPU_H__ */

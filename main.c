@@ -122,9 +122,9 @@ static void machine_reset(void) {
 
 	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
 
-	gpu_reset(&machine.gpu);
+	gpu_reset(&machine.gpu, machine.RAM);
 
-	display_reset(&machine.display); // fixme: move into gpu reset
+	display_reset(&machine.display);
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 }
@@ -167,7 +167,7 @@ void *machine_display(void *arg)
 
 	while(!machine.cpu_regs.panic) {
 		if (machine.display.enabled)
-			display_retrace(&machine.display);
+			display_retrace(&machine.display, machine.gpu.frame_buffer);
 		nanosleep(&frame_rate, NULL);
 	}
 
@@ -191,7 +191,7 @@ void *machine_gpu(void *arg)
 
 		machine.cpu_regs.exception = machine.gpu.exception;
 
-		gpu_decode_instr(&machine.gpu, &machine.display, machine.RAM);
+		gpu_decode_instr(&machine.gpu, &machine.display);
 
 		nanosleep(&gpu_clk_freq, NULL);
 	}

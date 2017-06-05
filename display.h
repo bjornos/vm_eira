@@ -38,6 +38,7 @@ struct _cursor_data {
 };
 
 enum display_adapter_capabilities {
+	display_init,
 	display_setxy,
 	display_getxy,
 	display_setc,
@@ -53,7 +54,6 @@ typedef enum {
 
 
 struct _display_adapter {
- 	uint8_t *mem;
  	uint16_t x;
 	uint16_t y;
 	char c;
@@ -62,16 +62,16 @@ struct _display_adapter {
 	int enabled;
 };
 
-void display_retrace(struct _display_adapter *display);
+void display_retrace(struct _display_adapter *display, uint8_t *frame_buffer);
 
 void display_wait_retrace(struct _display_adapter *display);
 
 int display_request(struct _display_adapter *display, uint32_t *instr,
-		int request);
+	uint8_t *frame_buffer, int request);
 
 void display_reset(struct _display_adapter *display);
 
-int display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode mode);
+//int display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode mode);
 
 
 
