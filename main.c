@@ -189,9 +189,9 @@ void *machine_gpu(void *arg)
 
 		gpu_fetch_instr(&machine.gpu);
 
-		machine.cpu_regs.exception = machine.gpu.exception;
-
 		gpu_decode_instr(&machine.gpu, &machine.display);
+
+		machine.cpu_regs.exception = machine.gpu.exception;
 
 		nanosleep(&gpu_clk_freq, NULL);
 	}
