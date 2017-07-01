@@ -56,11 +56,17 @@ typedef struct {
 } args_t;
 
 
+struct _io_regs {
+	uint16_t input;
+	uint16_t output;
+};
+
 static struct _machine {
 	uint8_t RAM[RAM_SIZE];
 	struct _cpu_regs cpu_regs;
 	struct _gpu gpu;
 	struct _display_adapter display;
+	struct _io_regs *ioport;
 } machine;
 
 static struct argp_option opts[] = {
@@ -126,6 +132,10 @@ static void machine_reset(void) {
 
 	display_reset(&machine.display);
 
+	/* setup I/O */
+	machine.ioport = (struct _io_regs *)&machine.RAM[MEM_START_IOPORT];
+	memset(machine.ioport, 0x00, sizeof(struct _io_regs));
+
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 }
 
@@ -184,7 +194,6 @@ void *machine_gpu(void *arg)
 	gpu_clk_freq.tv_sec = 0;
 
 	while(!machine.cpu_regs.panic) {
-
 		while(machine.gpu.reset);
 
 		gpu_fetch_instr(&machine.gpu);
@@ -271,13 +280,19 @@ int main(int argc,char *argv[])
 	pthread_join(gpu, &status);
 	pthread_join(display, &status);
 
+	if (args.machine_check) {
+		machine.ioport->input = IO_IN_TST_VAL;
+		machine.ioport->output = IO_OUT_TST_VAL;
+
+		test_result(machine.cpu_regs.GP_REG, machine.RAM);
+
+		printf("\n%s: all tests OK.\n",__func__);
+	}
+
 	if (args.dump_ram)
 		dump_ram(machine.RAM, args.dump_ram, args.dump_ram + args.dump_size);
 
-	if (args.machine_check) {
-		test_result(machine.cpu_regs.GP_REG, machine.RAM);
-		printf("\n%s: all tests OK.\n",__func__);
-	}
+	dump_io(machine.ioport->input, machine.ioport->output);
 
 	pthread_exit(NULL);
 

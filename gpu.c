@@ -26,7 +26,7 @@
 #include "exception.h"
 #include "memory.h"
 
-#define GPU_DBG(x) x
+#define GPU_DBG(x)
 
 enum {
 	GPU_LOCKED,

@@ -118,3 +118,11 @@ void dump_regs(uint16_t *REG)
 	printf("\n");
 }
 
+
+void dump_io(uint16_t in, uint16_t out)
+{
+	printf("I/O:\n=========\n");
+	printf("in:\t0x%x\n",in);
+	printf("out:\t0x%x\n",out);
+	printf("\n");
+}

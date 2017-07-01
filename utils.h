@@ -49,3 +49,5 @@ void dump_ram(uint8_t *RAM, int from, int to);
 
 void dump_regs(uint16_t *GP_REG);
 
+void dump_io(uint16_t in, uint16_t out);
+

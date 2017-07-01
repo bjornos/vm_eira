@@ -30,6 +30,10 @@
 #undef NDEBUG
 #include <assert.h>
 
+#define IO_OUT_TST_VAL	15901
+#define IO_IN_TST_VAL	16348
+
+
 void test_result(uint16_t *GP_REG, uint8_t *RAM) {
 	assert(*(GP_REG + 1) == 0xe4);
 	assert(*(GP_REG + 6) == *(GP_REG + 1));
@@ -43,6 +47,8 @@ void test_result(uint16_t *GP_REG, uint8_t *RAM) {
 	assert(*(RAM + 8200) == 0x0f);
 	assert(*(RAM + 8201) == 0x07);
 	assert(*(GP_REG + 7) == *(GP_REG + 8));
+	assert(*(uint16_t *)(RAM + MEM_START_IO_OUTPUT) == IO_OUT_TST_VAL);
+	assert(*(uint16_t *)(RAM + MEM_START_IO_INPUT) == IO_IN_TST_VAL);
 }
 
 const uint32_t program_regression_test[] = {
@@ -96,7 +102,6 @@ const uint32_t program_regression_test[] = {
 	(sub << 0) | (R7 << 8)  | OP_DST_REG | (1 << 16),			/* r7 = r7 - 1 */
 	(cmp << 0) | (R7 << 8) | OP_DST_REG | OP_SRC_REG | (8 << 16),		/* r7 == r8? */
 	(brneq << 0) | (9 << 16),						/* not eq. jump to @test_cmp (0x1074 */
-
 
 	(halt << 0),
 };
