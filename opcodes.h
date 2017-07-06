@@ -294,7 +294,7 @@
 #define getposxy	0xf2
 
 /**
- * Instruction putchar
+ * Instruction pchar
  *
  * produces a charachter output in screen display at position
  * px py.
@@ -304,6 +304,6 @@
  *
  *   The result must be placed in general purpose registers
  */
-#define putchar		0xf3
+#define pchar		0xf3
 
 #endif /* __OPCODES_H__ */

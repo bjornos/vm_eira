@@ -91,7 +91,7 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
 			//debug_opcode(dbg_info, dbg_index, "setposxy");
 			display_request(display, &instr, gpu->frame_buffer, DISPLAY_SETXY);
 			break;
-		case putchar:
+		case pchar:
 			//debug_opcode(dbg_info, dbg_index, "putchar");
 			display_wait_retrace(display);
 			display_request(display, &instr, gpu->frame_buffer, DISPLAY_SETC);
