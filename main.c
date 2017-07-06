@@ -27,11 +27,15 @@
 #include <signal.h>
 #include <time.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "opcodes.h"
 #include "cpu.h"
 #include "gpu.h"
 #include "display.h"
+#include "ioport.h"
 #include "memory.h"
 #include "exception.h"
 #include "testprogram.h"
@@ -59,6 +63,7 @@ typedef struct {
 struct _io_regs {
 	uint16_t input;
 	uint16_t output;
+	uint8_t active;
 };
 
 static struct _machine {
@@ -132,9 +137,15 @@ static void machine_reset(void) {
 
 	display_reset(&machine.display);
 
-	/* setup I/O */
+	/* map I/O */
 	machine.ioport = (struct _io_regs *)&machine.RAM[MEM_START_IOPORT];
 	memset(machine.ioport, 0x00, sizeof(struct _io_regs));
+
+	if (mkfifo(IO_INPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
+		perror("failed to create input port");
+		machine.ioport->active = 0;
+	} else
+		machine.ioport->active = 1;
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 }
@@ -181,6 +192,29 @@ void *machine_display(void *arg)
 		nanosleep(&frame_rate, NULL);
 	}
 
+	pthread_exit(NULL);
+}
+
+void *machine_ioport(void *arg)
+{
+	char inval[5] = { 0 };
+	int fd;
+
+	fd = open(IO_INPUT_PORT, O_RDONLY);
+	if (fd < 0) {
+		perror("unable to open input port");
+		pthread_exit(NULL);
+	}
+
+	while(!machine.cpu_regs.panic) {
+		while(machine.cpu_regs.reset);
+
+		read(fd, inval, sizeof(inval));
+		machine.ioport->input = atoi(inval);
+	}
+
+	close(fd);
+	unlink(IO_INPUT_PORT);
 	pthread_exit(NULL);
 }
 
@@ -245,7 +279,7 @@ void *machine_cpu(void *arg)
 int main(int argc,char *argv[])
 {
 	struct argp argp = {opts, parse_opt, args_doc, doc};
-	pthread_t display, cpu, gpu;
+	pthread_t display, cpu, gpu, io;
 	void *status;
 
 	signal(SIGINT, sig_handler);
@@ -261,6 +295,9 @@ int main(int argc,char *argv[])
 	pthread_create(&cpu, NULL, machine_cpu, NULL);
 	pthread_create(&gpu, NULL, machine_gpu, NULL);
 	pthread_create(&display, NULL, machine_display, NULL);
+
+	if (machine.ioport->active)
+		pthread_create(&io, NULL, machine_ioport, NULL);
 
 	machine_load_program_local(rom, MEM_START_ROM);
 
@@ -278,6 +315,7 @@ int main(int argc,char *argv[])
 
 	pthread_join(cpu, &status);
 	pthread_join(gpu, &status);
+	pthread_join(io, &status);
 	pthread_join(display, &status);
 
 	if (args.machine_check) {
@@ -289,10 +327,10 @@ int main(int argc,char *argv[])
 		printf("\n%s: all tests OK.\n",__func__);
 	}
 
-	if (args.dump_ram)
+	if (args.dump_ram) {
 		dump_ram(machine.RAM, args.dump_ram, args.dump_ram + args.dump_size);
-
-	dump_io(machine.ioport->input, machine.ioport->output);
+		dump_io(machine.ioport->input, machine.ioport->output);
+	}
 
 	pthread_exit(NULL);
 
