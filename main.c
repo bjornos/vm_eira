@@ -214,7 +214,7 @@ void *machine_ioport(void *arg)
 	}
 
 	close(fd);
-	unlink(IO_INPUT_PORT);
+
 	pthread_exit(NULL);
 }
 
@@ -315,8 +315,12 @@ int main(int argc,char *argv[])
 
 	pthread_join(cpu, &status);
 	pthread_join(gpu, &status);
-	pthread_join(io, &status);
 	pthread_join(display, &status);
+
+	if (machine.ioport->active) {
+		pthread_join(io, &status);
+		unlink(IO_INPUT_PORT);
+	}
 
 	if (args.machine_check) {
 		machine.ioport->input = IO_IN_TST_VAL;
