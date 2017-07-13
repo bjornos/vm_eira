@@ -51,3 +51,5 @@ void dump_regs(uint16_t *GP_REG);
 
 void dump_io(uint16_t in, uint16_t out);
 
+char *int_to_str(int num);
+

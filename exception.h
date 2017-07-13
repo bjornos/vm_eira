@@ -23,13 +23,14 @@
 #define __EXCEPTION_H_
 
 enum exceptions {
-	EXC_NONE,
+	EXC_NONE = 0,
 	EXC_INSTR,
 	EXC_MEM,
 	EXC_REG,
 	EXC_PRG,
 	EXC_DISP,
 	EXC_GPU,
+	EXC_IOPORT,
 	EXC_SHUTDOWN,
 };
 

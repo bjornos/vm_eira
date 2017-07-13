@@ -19,29 +19,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <argp.h>
-#include <signal.h>
-#include <time.h>
-#include <pthread.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
 #include "opcodes.h"
-#include "cpu.h"
-#include "gpu.h"
-#include "display.h"
-#include "ioport.h"
-#include "memory.h"
 #include "exception.h"
 #include "testprogram.h"
 #include "prg.h"
 #include "rom.h"
 #include "utils.h"
+#include "machine.h"
 
 #define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
 
@@ -59,20 +43,7 @@ typedef struct {
 	int dump_size;
 } args_t;
 
-
-struct _io_regs {
-	uint16_t input;
-	uint16_t output;
-	uint8_t active;
-};
-
-static struct _machine {
-	uint8_t RAM[RAM_SIZE];
-	struct _cpu_regs cpu_regs;
-	struct _gpu gpu;
-	struct _display_adapter display;
-	struct _io_regs *ioport;
-} machine;
+struct _machine machine;
 
 static struct argp_option opts[] = {
 	{"debug", 'd', 0, OPTION_ARG_OPTIONAL, "Enable debug"},
@@ -94,6 +65,10 @@ void sig_handler(int signo)
 {
 	if (signo == SIGINT) {
 		machine.cpu_regs.exception = EXC_SHUTDOWN;
+		args.debug = 1;
+	}
+	if (signo == SIGPIPE) {
+		machine.cpu_regs.exception = EXC_IOPORT;
 		args.debug = 1;
 	}
 }
@@ -137,15 +112,7 @@ static void machine_reset(void) {
 
 	display_reset(&machine.display);
 
-	/* map I/O */
-	machine.ioport = (struct _io_regs *)&machine.RAM[MEM_START_IOPORT];
-	memset(machine.ioport, 0x00, sizeof(struct _io_regs));
-
-	if (mkfifo(IO_INPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
-		perror("failed to create input port");
-		machine.ioport->active = 0;
-	} else
-		machine.ioport->active = 1;
+	ioport_reset(&machine);
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 }
@@ -195,28 +162,6 @@ void *machine_display(void *arg)
 	pthread_exit(NULL);
 }
 
-void *machine_ioport(void *arg)
-{
-	char inval[5] = { 0 };
-	int fd;
-
-	fd = open(IO_INPUT_PORT, O_RDONLY);
-	if (fd < 0) {
-		perror("unable to open input port");
-		pthread_exit(NULL);
-	}
-
-	while(!machine.cpu_regs.panic) {
-		while(machine.cpu_regs.reset);
-
-		read(fd, inval, sizeof(inval));
-		machine.ioport->input = atoi(inval);
-	}
-
-	close(fd);
-
-	pthread_exit(NULL);
-}
 
 
 void *machine_gpu(void *arg)
@@ -234,7 +179,8 @@ void *machine_gpu(void *arg)
 
 		gpu_decode_instr(&machine.gpu, &machine.display);
 
-		machine.cpu_regs.exception = machine.gpu.exception;
+		if (machine.gpu.exception != EXC_NONE)
+			machine.cpu_regs.exception = machine.gpu.exception;
 
 		nanosleep(&gpu_clk_freq, NULL);
 	}
@@ -279,10 +225,11 @@ void *machine_cpu(void *arg)
 int main(int argc,char *argv[])
 {
 	struct argp argp = {opts, parse_opt, args_doc, doc};
-	pthread_t display, cpu, gpu, io;
+	pthread_t display, cpu, gpu, io_in, io_out;
 	void *status;
 
 	signal(SIGINT, sig_handler);
+	signal(SIGPIPE, sig_handler);
 
 	args.debug = args.machine_check = args.dump_ram = 0;
 	args.load_program = NULL;
@@ -296,8 +243,10 @@ int main(int argc,char *argv[])
 	pthread_create(&gpu, NULL, machine_gpu, NULL);
 	pthread_create(&display, NULL, machine_display, NULL);
 
-	if (machine.ioport->active)
-		pthread_create(&io, NULL, machine_ioport, NULL);
+	if (machine.ioport->active) {
+		pthread_create(&io_in, NULL, ioport_machine_input, &machine);
+		pthread_create(&io_out, NULL, ioport_machine_output, &machine);
+	}
 
 	machine_load_program_local(rom, MEM_START_ROM);
 
@@ -318,8 +267,12 @@ int main(int argc,char *argv[])
 	pthread_join(display, &status);
 
 	if (machine.ioport->active) {
-		pthread_join(io, &status);
+		machine.ioport->active = 0;
+		ioport_shutdown((int)machine.ioport->input);
+		pthread_join(io_in, &status);
+		pthread_join(io_out, &status);
 		unlink(IO_INPUT_PORT);
+		unlink(IO_OUTPUT_PORT);
 	}
 
 	if (args.machine_check) {

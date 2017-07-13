@@ -261,6 +261,9 @@ void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr) {
 	case EXC_GPU:
 			printf("display error ");
 			break;
+	case EXC_IOPORT:
+			printf("I/O error ");
+			break;
 	case EXC_SHUTDOWN:
 			printf("machine shutdown ");
 			break;

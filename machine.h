@@ -19,29 +19,34 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __IOPORT_H__
-#define __IOPORT_H__
+#ifndef __MACHINE_H__
+#define __MACHINE_H__
 
-#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <argp.h>
+#include <signal.h>
+#include <time.h>
+#include <pthread.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#define IO_INPUT_PORT	"/tmp/eira_input"
-#define IO_OUTPUT_PORT	"/tmp/eira_output"
+#include "cpu.h"
+#include "gpu.h"
+#include "display.h"
+#include "ioport.h"
+#include "memory.h"
 
-struct _io_regs {
-	uint16_t input;
-	uint16_t output;
-	uint8_t active;
+
+struct _machine {
+	uint8_t RAM[RAM_SIZE];
+	struct _cpu_regs cpu_regs;
+	struct _gpu gpu;
+	struct _display_adapter display;
+	struct _io_regs *ioport;
 };
 
-
-
-void ioport_reset(void *mach);
-
-void ioport_shutdown(int input_state);
-
-void *ioport_machine_output(void *mach);
-
-void *ioport_machine_input(void *mach);
-
-
-#endif /* __IOPORT_H__ */
+#endif /* __MACHINE_H_ */

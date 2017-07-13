@@ -21,6 +21,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 #include "utils.h"
 #include "registers.h"
 #include "display.h"
@@ -125,4 +126,14 @@ void dump_io(uint16_t in, uint16_t out)
 	printf("in:\t0x%x\n",in);
 	printf("out:\t0x%x\n",out);
 	printf("\n");
+}
+
+
+char *int_to_str(int num)
+{
+	int len = snprintf(NULL, 0, "%d", num);
+	char *result = malloc(len + 2);
+	snprintf(result, len + 2, "%d\n", num);
+
+	return result;
 }

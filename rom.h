@@ -38,6 +38,11 @@ const uint32_t rom[] = {
 	(1 << 0),		/* reserved */
 	(1 << 0),		/* reserved */
 	(126 << 0),		/* program size  */
+
+	/* set default outport state */
+	(mov << 0) | (R0 << 8)  | OP_DST_REG | (0x8001 << 16),			/* binary ones on each side */
+	(movi << 0) | (R0 << 8)  | OP_DST_MEM | (MEM_START_IO_OUTPUT << 16),
+
 	(dimd << 0) | (mode_40x12 << 8),
 	(diwtrt << 0),
 	(diclr << 0),
