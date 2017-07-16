@@ -145,53 +145,7 @@ __inline__ static void machine_load_program_local(const uint32_t *prg, uint16_t 
 }
 
 
-void *machine_display(void *arg)
-{
-	struct timespec frame_rate;
-	int fps = DISPLAY_FRAME_RATE;
 
-	frame_rate.tv_nsec = 1000000000 / fps;
-	frame_rate.tv_sec = 0;
-
-	while(!machine.cpu_regs.panic) {
-		if (machine.display.enabled)
-			display_retrace(&machine.display, machine.gpu.frame_buffer);
-		nanosleep(&frame_rate, NULL);
-	}
-
-	pthread_exit(NULL);
-}
-
-
-void *machine_cpu(void *arg)
-{
-	struct timespec cpu_clk_freq;
-	long instr_p;
-	int hz = 10; /* 10 Hz */
-
-	cpu_clk_freq.tv_nsec = 1000000000 / hz;
-	cpu_clk_freq.tv_sec = 0;
-
-	while(!machine.cpu_regs.panic) {
-		while(machine.cpu_regs.reset);
-
-		instr_p = cpu_fetch_instruction(&machine.cpu_regs);
-		cpu_decode_instruction(&machine.cpu_regs, machine.RAM, &machine.display);
-
-		if (machine.cpu_regs.gpu_request)  {
-			gpu_add_instr(&machine.gpu, (uint32_t *)&machine.RAM[instr_p]);
-		}
-
-		if (machine.cpu_regs.exception) {
-			display_wait_retrace(&machine.display);
-			cpu_handle_exception(&machine.cpu_regs, (uint32_t *)&machine.RAM[instr_p]);
-		}
-
-		nanosleep(&cpu_clk_freq, NULL);
-	}
-
-	pthread_exit(NULL);
-}
 
 int main(int argc,char *argv[])
 {
@@ -210,9 +164,9 @@ int main(int argc,char *argv[])
 
 	machine_reset();
 
-	pthread_create(&cpu, NULL, machine_cpu, NULL);
+	pthread_create(&cpu, NULL, cpu_machine, &machine);
 	pthread_create(&gpu, NULL, gpu_machine, &machine);
-	pthread_create(&display, NULL, machine_display, NULL);
+	pthread_create(&display, NULL, display_machine, &machine);
 
 	if (machine.ioport->active) {
 		pthread_create(&io_in, NULL, ioport_machine_input, &machine);

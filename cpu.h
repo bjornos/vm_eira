@@ -62,5 +62,6 @@ void cpu_reset(struct _cpu_regs *cpu_regs, uint32_t reset_vector);
 
 long cpu_fetch_instruction(struct _cpu_regs *cpu_regs);
 
+void *cpu_machine(void *mach);
 
 #endif /* __CPU_H__ */

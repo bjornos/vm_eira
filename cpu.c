@@ -22,12 +22,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "cpu.h"
 #include "exception.h"
 #include "opcodes.h"
 #include "memory.h"
 #include "display.h"
 #include "utils.h"
+#include "machine.h"
 
 static struct _dbg dbg_info[DBG_HISTORY];
 static int dbg_index = 0;
@@ -312,4 +312,37 @@ void cpu_reset(struct _cpu_regs *cpu_regs, uint32_t reset_vector) {
 	dbg_index = 0;
 
 }
+
+
+void *cpu_machine(void *mach)
+{
+	struct _machine *machine = mach;
+	struct timespec cpu_clk_freq;
+	long instr_p;
+	int hz = 10; /* 10 Hz */
+
+	cpu_clk_freq.tv_nsec = 1000000000 / hz;
+	cpu_clk_freq.tv_sec = 0;
+
+	while(!machine->cpu_regs.panic) {
+		while(machine->cpu_regs.reset);
+
+		instr_p = cpu_fetch_instruction(&machine->cpu_regs);
+		cpu_decode_instruction(&machine->cpu_regs, machine->RAM, &machine->display);
+
+		if (machine->cpu_regs.gpu_request)  {
+			gpu_add_instr(&machine->gpu, (uint32_t *)&machine->RAM[instr_p]);
+		}
+
+		if (machine->cpu_regs.exception) {
+			display_wait_retrace(&machine->display);
+			cpu_handle_exception(&machine->cpu_regs, (uint32_t *)&machine->RAM[instr_p]);
+		}
+
+		nanosleep(&cpu_clk_freq, NULL);
+	}
+
+	pthread_exit(NULL);
+}
+
 

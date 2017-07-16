@@ -3,6 +3,7 @@
 #include "display.h"
 #include "memory.h"
 #include "exception.h"
+#include "machine.h"
 
 struct _adapter_mode {
 	display_mode name;
@@ -100,3 +101,23 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 
 	return ret;
 }
+
+
+void *display_machine(void *mach)
+{
+	struct _machine *machine = mach;
+	struct timespec frame_rate;
+	int fps = DISPLAY_FRAME_RATE;
+
+	frame_rate.tv_nsec = 1000000000 / fps;
+	frame_rate.tv_sec = 0;
+
+	while(!machine->cpu_regs.panic) {
+		if (machine->display.enabled)
+			display_retrace(&machine->display, machine->gpu.frame_buffer);
+		nanosleep(&frame_rate, NULL);
+	}
+
+	pthread_exit(NULL);
+}
+
