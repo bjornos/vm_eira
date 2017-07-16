@@ -45,5 +45,6 @@ void gpu_add_instr(struct _gpu *gpu, uint32_t *instr);
 
 void gpu_reset(struct _gpu *gpu, uint8_t *RAM);
 
+void *gpu_machine(void *mach);
 
 #endif /* __GPU_H__ */

@@ -163,35 +163,6 @@ void *machine_display(void *arg)
 }
 
 
-
-void *machine_gpu(void *arg)
-{
-	struct timespec gpu_clk_freq;
-	int hz = 10; /* 10 Hz */
-
-	gpu_clk_freq.tv_nsec = 1000000000 / hz;
-	gpu_clk_freq.tv_sec = 0;
-
-	while(!machine.cpu_regs.panic) {
-		while(machine.gpu.reset);
-
-		gpu_fetch_instr(&machine.gpu);
-
-		gpu_decode_instr(&machine.gpu, &machine.display);
-
-		if (machine.gpu.exception != EXC_NONE)
-			machine.cpu_regs.exception = machine.gpu.exception;
-
-		nanosleep(&gpu_clk_freq, NULL);
-	}
-
-	//for (int i=0; i<16;i++);
-	//	printf("gpu instr list %d: 0x%x\n",i,machine.gpu.instr_list[i]);
-
-	pthread_exit(NULL);
-}
-
-
 void *machine_cpu(void *arg)
 {
 	struct timespec cpu_clk_freq;
@@ -240,7 +211,7 @@ int main(int argc,char *argv[])
 	machine_reset();
 
 	pthread_create(&cpu, NULL, machine_cpu, NULL);
-	pthread_create(&gpu, NULL, machine_gpu, NULL);
+	pthread_create(&gpu, NULL, gpu_machine, &machine);
 	pthread_create(&display, NULL, machine_display, NULL);
 
 	if (machine.ioport->active) {

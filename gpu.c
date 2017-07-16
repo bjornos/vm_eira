@@ -25,6 +25,7 @@
 #include "opcodes.h"
 #include "exception.h"
 #include "memory.h"
+#include "machine.h"
 
 #define GPU_DBG(x)
 
@@ -138,4 +139,35 @@ void gpu_reset(struct _gpu *gpu, uint8_t *RAM)
 	gpu->exception = EXC_NONE;
 
 	gpu_unlock(gpu);
+}
+
+
+void *gpu_machine(void *mach)
+{
+	struct _machine *machine = mach;
+	struct timespec gpu_clk_freq;
+	int hz = 10; /* 10 Hz */
+	int i;
+
+	gpu_clk_freq.tv_nsec = 1000000000 / hz;
+	gpu_clk_freq.tv_sec = 0;
+
+	while(!machine->cpu_regs.panic) {
+		while(machine->gpu.reset);
+
+		gpu_fetch_instr(&machine->gpu);
+
+		gpu_decode_instr(&machine->gpu, &machine->display);
+
+		if (machine->gpu.exception != EXC_NONE)
+			machine->cpu_regs.exception = machine->gpu.exception;
+
+		nanosleep(&gpu_clk_freq, NULL);
+	}
+
+	for (i=0; i<GPU_INSTR_BUFFER_SIZE;i++);
+		GPU_DBG(printf("gpu instr list %d: 0x%x\n",
+			i,machine.gpu.instr_list[i]));
+
+	pthread_exit(NULL);
 }
