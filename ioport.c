@@ -86,7 +86,7 @@ void *ioport_machine_output(void *mach)
 		if (fd < 0) {
 			perror("unable to access output port");
 			machine->cpu_regs.exception = EXC_IOPORT;
-			goto ioport_ouput_exit;
+			pthread_exit(NULL);
 		}
 		outval = int_to_str((int)machine->ioport->output);
 
@@ -101,7 +101,6 @@ void *ioport_machine_output(void *mach)
 		nanosleep(&io_clk_freq, NULL);
 	}
 
-ioport_ouput_exit:
 	pthread_exit(NULL);
 }
 
@@ -118,7 +117,7 @@ void *ioport_machine_input(void *mach)
 		if (fd < 0) {
 			perror("unable to access input port");
 			machine->cpu_regs.exception = EXC_IOPORT;
-			goto ioport_input_exit;
+			pthread_exit(NULL);
 		}
 		read(fd, inval, sizeof(inval));
 		close(fd);
@@ -126,6 +125,5 @@ void *ioport_machine_input(void *mach)
 		machine->ioport->input = atoi(inval);
 	}
 
-ioport_input_exit:
 	pthread_exit(NULL);
 }
