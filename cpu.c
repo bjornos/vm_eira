@@ -220,8 +220,8 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 		case dimd:
 		case diclr:
 		case diwtrt:
-		case setposxy:
-		case pchar:
+		case disetxy:
+		case dichar:
 			debug_opcode(dbg_info, dbg_index, "<gpu code>");
 			cpu_regs->gpu_request = 1;
 			break;

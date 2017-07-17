@@ -88,11 +88,11 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
 			//debug_opcode(dbg_info, dbg_index, "diwtrt");
 			display_wait_retrace(display);
 			break;
-		case setposxy:
+		case disetxy:
 			//debug_opcode(dbg_info, dbg_index, "setposxy");
 			display_request(display, &instr, gpu->frame_buffer, DISPLAY_SETXY);
 			break;
-		case pchar:
+		case dichar:
 			//debug_opcode(dbg_info, dbg_index, "putchar");
 			display_wait_retrace(display);
 			display_request(display, &instr, gpu->frame_buffer, DISPLAY_SETC);

@@ -58,12 +58,12 @@ const uint32_t program_regression_test[] = {
 	(1 << 0),		/* reserved */
 	(112 << 0),		/* code size  */
 	(diclr << 0),
-	(setposxy << 0) | 10  << 8 | (1 << 20),
-	(pchar << 0) | ('T' << 8),
-	(setposxy << 0) | 11  << 8 | (1 << 20),
-	(pchar << 0) | ('S' << 8),
-	(setposxy << 0) | 12  << 8 | (1 << 20),
-	(pchar << 0) | ('T' << 8),
+	(disetxy << 0) | 10  << 8 | (1 << 20),
+	(dichar << 0) | ('T' << 8),
+	(disetxy << 0) | 11  << 8 | (1 << 20),
+	(dichar << 0) | ('S' << 8),
+	(disetxy << 0) | 12  << 8 | (1 << 20),
+	(dichar << 0) | ('T' << 8),
 	(nop << 0),
 
 	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xe4 << 16), 			/* r1 = 0xe4 */

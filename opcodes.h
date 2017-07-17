@@ -117,7 +117,7 @@
  *
  * syntax: movi dest, source
  *
- *  | 0010 0000 | 0000 | 00  | 00 | 0000 0000 0000 0000 |
+ *  | 1010 0000 | 0000 | 00  | 00 | 0000 0000 0000 0000 |
  *  0           8      12    14   16                    31
  *                 reg  src    dst   #val | @mem | reg
  *                      type   type
@@ -156,7 +156,7 @@
  * compare the value in general purpose register reg with immediate
  * value. the result is placed in the cpu conditional register (cr)
  *
- * | 1001 1000 |  0000  | 00 | 00 | 0000 0000 0000 0000 |
+ * | 100o 1000 |  0000  | 00 | 00 | 0000 0000 0000 0000 |
  * 0           8          12      16
  *    instr       reg     src  MBZ         value
 */
@@ -172,7 +172,7 @@
  * is used instead. if the address value is above GP REG MAX, an exception
  * will occur.
  *
- * | 0001 0010 | 0000 0000 | 0000 0000 0000 0000 |
+ * | 0100 1000 | 0000 0000 | 0000 0000 0000 0000 |
  * 0           8           16
  *    instr       reserved           addr
 */
@@ -188,7 +188,7 @@
  * is used instead. if the address value is above GP REG MAX, an exception
  * will occur.
  *
- * | 0001 0010 | 0000 0000 | 0000 0000 0000 0000 |
+ * | 1100 1000 | 0000 0000 | 0000 0000 0000 0000 |
  * 0           8           16
  *    instr       reserved       addr | register
 */
@@ -203,7 +203,7 @@
  * store current value of program counter into general
  * purpose register
  *
- * | 0001 0010 | 0000 0000 | 0000 0000 0000 0000 |
+ * | 0010 1000 | 0000 0000 | 0000 0000 0000 0000 |
  * 0           8           16
  *    instr       register       reserved
 */
@@ -258,52 +258,36 @@
  *
  * clear display adapter memory
  *
- * | 0100 1100 | 0000 0000 0000 0000 0000 0000 |
+ * | 1100 1100 | 0000 0000 0000 0000 0000 0000 |
  * 0           8                              31
  *    instr               reserved
  */
 #define diclr		0x33
 
-/*
- * instructions below are experimental
- * -----------------------------------
- *
- */
-
 /**
- * instruction: setposxy
+ * instruction: disetxy
  *
  * set cursor/pixelpos at x,y
- * | 0000 0000 | 0000 0000 0000 | 0000 0000 0000 |
+ *
+ * | 0010 1100 | 0000 0000 0000 | 0000 0000 0000 |
  *   0          8    xpos      15      ypos
  *
  *   x- and ypos are general purpose registers
  *   12-bit value may address up to 4096 pixels.
 */
-#define setposxy	0xf1
+#define disetxy	0x34
 
 /**
- * instruction: getposxy
- *
- * get cursor/pixelpos at x,y
- * | 0000 0000 | 0000 0000 0000 | 0000 0000 0000 |
- *   0          8    xpos       15     ypos
- *
- *   The result must be placed in general purpose registers
-*/
-#define getposxy	0xf2
-
-/**
- * Instruction pchar
+ * Instruction dichar
  *
  * produces a charachter output in screen display at position
  * px py.
  *
- * | 0000 0000  | 0000  0000  |  0000 0000 0000 0000 |
+ * | 1010 1100  | 0000  0000  |  0000 0000 0000 0000 |
  *   0          8 ASCII code  15
  *
  *   The result must be placed in general purpose registers
  */
-#define pchar		0xf3
+#define dichar		0x35
 
 #endif /* __OPCODES_H__ */
