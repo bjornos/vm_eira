@@ -28,7 +28,8 @@
 #include "display.h"
 
 const uint32_t program_reset[] = {
-	(jmp << 0) | ((MEM_START_ROM + 4) << 8),
+	/* jump back to start of ROM */
+	(jmp << 0) | ((MEM_START_ROM + (sizeof(struct _prg_header) / sizeof(uint32_t))) << 8),
 	(nop << 0),
 	(halt << 0),
 };
@@ -37,7 +38,7 @@ const uint32_t rom[] = {
 	PRG_MAGIC_HEADER,	/* magic */
 	(1 << 0),		/* reserved */
 	(1 << 0),		/* reserved */
-	(126 << 0),		/* program size  */
+	(160 << 0),		/* program size  */
 
 	/* set default outport state */
 	(mov << 0) | (R0 << 8)  | OP_DST_REG | (0x8001 << 16),			/* binary ones on each side */
@@ -73,7 +74,9 @@ const uint32_t rom[] = {
 	(disetxy << 0) | 12  << 8 | (2 << 20),
 	(dichar << 0) | ('-' << 8),
 	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('\'' << 8),
+	(dichar << 0) | ('\\' << 8),
+	(disetxy << 0) | 12  << 8 | (2 << 20),
+	(dichar << 0) | ('*' << 8),
 
 	/* jump to program memory and start any program loaded
 	 * if no program is loaded we will end up in MEM_START_ROM again.
