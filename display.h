@@ -27,7 +27,9 @@
 
 /* fixme: make cross platform compatible */
 #define display_clear() printf("\033[H\033[J")
-#define gotoxy(x,y) printf("\033[%d;%dH", (y), (x))
+#define gotoxy(x,y) 	printf("\033[%d;%dH", (y), (x))
+#define cursor_on()		printf("\x1B[?25h")
+#define cursor_off()	printf("\x1B[?25l")
 
 #define DISPLAY_FRAME_RATE	50	/* 50Hz*/
 
@@ -71,7 +73,6 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 
 void display_reset(struct _display_adapter *display);
 
-//int display_init(struct _display_adapter *display, uint8_t *machine_ram, display_mode mode);
 void *display_machine(void *mach);
 
 

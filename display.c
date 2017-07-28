@@ -22,9 +22,11 @@ void display_retrace(struct _display_adapter *display, uint8_t *frame_buffer)
 {
 	int cx,cy,addr;
 
-	if (!frame_buffer)
+	if (!frame_buffer) {
 		//throw_exception(display);
 		printf("No display mem!\n");
+		return;
+	}
 
 	display->refresh = 1;
 
@@ -32,7 +34,7 @@ void display_retrace(struct _display_adapter *display, uint8_t *frame_buffer)
 		addr = (cy * adapter_mode[display->mode].vertical);
 		for (cx=0; cx < adapter_mode[display->mode].vertical; cx++) {
 			gotoxy(cx,cy);
-			printf("%c\n",(char)*(frame_buffer + addr) & 0xff);
+			putchar((char)*(frame_buffer + addr) & 0xff);
 			addr++;
 		}
 	}
@@ -61,7 +63,7 @@ int display_set_mode(struct _display_adapter *display, uint8_t *frame_buffer, di
 	else
 		return EXC_DISP;
 
-	memset(frame_buffer, 0x00, adapter_mode[display->mode].resolution);
+	memset(frame_buffer,' ', adapter_mode[display->mode].resolution);
 	display->refresh = 0;
 	display->enabled = 1;
 
@@ -77,9 +79,10 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 	if (!display->enabled && (request != DISPLAY_INIT))
 		return EXC_DISP;
 
+	display_wait_retrace(display);
+
 	switch(request) {
 		case DISPLAY_INIT:
-			display_wait_retrace(display);
 			ret =
 				display_set_mode(display, frame_buffer, (*instr >> 8));
 			break;
@@ -107,16 +110,19 @@ void *display_machine(void *mach)
 {
 	struct _machine *machine = mach;
 	struct timespec frame_rate;
-	int fps = DISPLAY_FRAME_RATE;
 
-	frame_rate.tv_nsec = 1000000000 / fps;
+	frame_rate.tv_nsec = 1000000000 / DISPLAY_FRAME_RATE;
 	frame_rate.tv_sec = 0;
+
+	cursor_off();
 
 	while(!machine->cpu_regs.panic) {
 		if (machine->display.enabled)
 			display_retrace(&machine->display, machine->gpu.frame_buffer);
 		nanosleep(&frame_rate, NULL);
 	}
+
+	cursor_on();
 
 	pthread_exit(NULL);
 }
