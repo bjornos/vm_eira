@@ -56,6 +56,7 @@ void gpu_fetch_instr(struct _gpu *gpu)
 	gpu_unlock(gpu);
 }
 
+
 void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
 {
 	uint32_t instr;
@@ -103,8 +104,9 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
 			gpu_exception = EXC_GPU;
 			break;
 	}
-			GPU_DBG(gotoxy(1,21));
-			GPU_DBG(printf("gpu instr: 0x%x ip: %d listpos %d \n",opcode, gpu->instr_ptr,gpu->instr_list_pos));
+
+	GPU_DBG(gotoxy(1,21));
+	GPU_DBG(printf("gpu instr:\t0x%x\t\tip: %d \tlistpos %d  \n",opcode, gpu->instr_ptr,gpu->instr_list_pos));
 
 	gpu->exception = gpu_exception;
 }
@@ -114,7 +116,7 @@ void gpu_add_instr(struct _gpu *gpu, uint32_t *instr)
 	gpu_lock(gpu);
 
 	GPU_DBG(gotoxy(1,20));
-	GPU_DBG(printf("gpu adding instr: 0x%x ip: %d listpos %d \n",*instr, gpu->instr_ptr,gpu->instr_list_pos));
+	GPU_DBG(printf("gpu adding instr:\t0x%x\t ip: %d \t\t listpos %d  \n",*instr, gpu->instr_ptr,gpu->instr_list_pos));
 
 	gpu->instr_list[gpu->instr_list_pos] = *instr;
 	gpu->instr_list_pos = (gpu->instr_list_pos + 1) % GPU_INSTR_BUFFER_SIZE;
@@ -167,7 +169,7 @@ void *gpu_machine(void *mach)
 
 	for (i=0; i<GPU_INSTR_BUFFER_SIZE;i++);
 		GPU_DBG(printf("gpu instr list %d: 0x%x\n",
-			i,machine.gpu.instr_list[i]));
+			i,machine->gpu.instr_list[i]));
 
 	pthread_exit(NULL);
 }
