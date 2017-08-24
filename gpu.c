@@ -26,6 +26,7 @@
 #include "exception.h"
 #include "memory.h"
 #include "machine.h"
+#include "utils.h"
 
 #define GPU_DBG(x)
 
@@ -33,6 +34,9 @@ enum {
 	GPU_LOCKED,
 	GPU_UNLOCKED
 };
+
+static struct _dbg dbg_info[DBG_HISTORY];
+static int dbg_index;
 
 __inline__ static void gpu_lock(struct _gpu *gpu)
 {
@@ -140,16 +144,32 @@ void gpu_reset(struct _gpu *gpu, uint8_t *RAM)
 
 	gpu->exception = EXC_NONE;
 
+	for (int d=0; d < DBG_HISTORY; d++)
+		memset(dbg_info + d, 0x00, sizeof(struct _dbg));
+
+	dbg_index = 0;
+
 	gpu_unlock(gpu);
 }
 
+void gpu_debug_out(void *mach)
+{
+	struct _machine *machine = mach;
+
+	printf("GPU Registers\n============\nIP: %d\t list_pos %d\n",
+		machine->gpu.instr_ptr, machine->gpu.instr_list_pos);
+
+	for (int i=0; i<GPU_INSTR_BUFFER_SIZE;i++)
+		printf("instr list %d: 0x%x\n",
+			i,machine->gpu.instr_list[i]);
+
+}
 
 void *gpu_machine(void *mach)
 {
 	struct _machine *machine = mach;
 	struct timespec gpu_clk_freq;
 	int hz = 10; /* 10 Hz */
-	int i;
 
 	gpu_clk_freq.tv_nsec = 1000000000 / hz;
 	gpu_clk_freq.tv_sec = 0;
@@ -166,10 +186,7 @@ void *gpu_machine(void *mach)
 
 		nanosleep(&gpu_clk_freq, NULL);
 	}
-
-	for (i=0; i<GPU_INSTR_BUFFER_SIZE;i++);
-		GPU_DBG(printf("gpu instr list %d: 0x%x\n",
-			i,machine->gpu.instr_list[i]));
+	//gpu_debug_out(mach);
 
 	pthread_exit(NULL);
 }
