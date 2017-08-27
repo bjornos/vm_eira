@@ -51,28 +51,32 @@ __inline__ static void gpu_unlock(struct _gpu *gpu)
 	gpu->instr_lock = GPU_UNLOCKED;
 }
 
-void gpu_fetch_instr(struct _gpu *gpu)
+
+uint32_t gpu_fetch_instr(struct _gpu *gpu)
 {
+	uint32_t instr = diwait;
+
 	gpu_lock(gpu);
 
-	gpu->instr_ptr = (gpu->instr_ptr + 1) % GPU_INSTR_BUFFER_SIZE;
+	if (gpu->instr_ptr) {
+		instr = gpu->instr_list[0];
+
+		for (int i=0; i < gpu->instr_ptr; i++)
+			gpu->instr_list[i] = gpu->instr_list[i + 1];
+
+		gpu->instr_ptr--;
+	}
 
 	gpu_unlock(gpu);
+
+	return instr;
 }
 
 
-void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
+void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display, uint32_t instr)
 {
-	uint32_t instr;
 	uint8_t opcode;
 	int gpu_exception = EXC_NONE;
-
-	gpu_lock(gpu);
-
-	instr = gpu->instr_list[gpu->instr_ptr];
-	gpu->instr_list[gpu->instr_ptr] = diwait;
-
-	gpu_unlock(gpu);
 
 	opcode = instr & 0xff;
 
@@ -110,20 +114,20 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display)
 	}
 
 	GPU_DBG(gotoxy(1,21));
-	GPU_DBG(printf("gpu instr:\t0x%x\t\tip: %d \tlistpos %d  \n",opcode, gpu->instr_ptr,gpu->instr_list_pos));
+	GPU_DBG(printf("gpu instr:\t0x%x\t\tip: %d  \n",opcode, gpu->instr_ptr));
 
 	gpu->exception = gpu_exception;
 }
+
 
 void gpu_add_instr(struct _gpu *gpu, uint32_t *instr)
 {
 	gpu_lock(gpu);
 
 	GPU_DBG(gotoxy(1,20));
-	GPU_DBG(printf("gpu adding instr:\t0x%x\t ip: %d \t\t listpos %d  \n",*instr, gpu->instr_ptr,gpu->instr_list_pos));
+	GPU_DBG(printf("gpu adding instr:\t0x%x\t ip: %d \t\t \n",*instr, gpu->instr_ptr));
 
-	gpu->instr_list[gpu->instr_list_pos] = *instr;
-	gpu->instr_list_pos = (gpu->instr_list_pos + 1) % GPU_INSTR_BUFFER_SIZE;
+	gpu->instr_list[gpu->instr_ptr++] = *instr;
 
 	gpu_unlock(gpu);
 }
@@ -140,7 +144,6 @@ void gpu_reset(struct _gpu *gpu, uint8_t *RAM)
 		gpu->instr_list[i] = diwait;
 
 	gpu->instr_ptr = 0;
-	gpu->instr_list_pos = 0;
 
 	gpu->exception = EXC_NONE;
 
@@ -156,8 +159,8 @@ void gpu_debug_out(void *mach)
 {
 	struct _machine *machine = mach;
 
-	printf("GPU Registers\n============\nIP: %d\t list_pos %d\n",
-		machine->gpu.instr_ptr, machine->gpu.instr_list_pos);
+	printf("GPU Registers\n============\nIP: %d\n",
+		machine->gpu.instr_ptr);
 
 	for (int i=0; i<GPU_INSTR_BUFFER_SIZE;i++)
 		printf("instr list %d: 0x%x\n",
@@ -170,6 +173,7 @@ void *gpu_machine(void *mach)
 	struct _machine *machine = mach;
 	struct timespec gpu_clk_freq;
 	int hz = 10; /* 10 Hz */
+	uint32_t instr;
 
 	gpu_clk_freq.tv_nsec = 1000000000 / hz;
 	gpu_clk_freq.tv_sec = 0;
@@ -177,9 +181,9 @@ void *gpu_machine(void *mach)
 	while(!machine->cpu_regs.panic) {
 		while(machine->gpu.reset);
 
-		gpu_fetch_instr(&machine->gpu);
+		instr = gpu_fetch_instr(&machine->gpu);
 
-		gpu_decode_instr(&machine->gpu, &machine->display);
+		gpu_decode_instr(&machine->gpu, &machine->display, instr);
 
 		if (machine->gpu.exception != EXC_NONE)
 			machine->cpu_regs.exception = machine->gpu.exception;

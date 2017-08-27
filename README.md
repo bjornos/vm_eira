@@ -11,9 +11,8 @@ current implementation relies on ANSI escape sequences for "screen output".
 GPU
 ---
 The GPU is a co-processor to the main CPU which handles all the display related opcodes.
-It constantly iterates over a ring buffer of instructions which are inserted by the main
-CPU whenever it hit a GPU related opcode. The default instruction is "wait" which of
-course means do nothing.
+It works on an instruction list which the main CPU populates whenever it hit a GPU related
+opcode. The default instruction is "wait" which of course means do nothing.
 
 I/O Port
 --------
