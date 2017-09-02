@@ -22,6 +22,7 @@
 #ifndef REGISTERS_H_
 #define REGISTERS_H_
 
+
 #define GP_REG_MAX 	0xf
 
 #define R0		0x00
@@ -40,9 +41,6 @@
 #define R13		0x0d
 #define R14		0x0e
 #define	R15		0x0f
-
-#define R_GP_SWITCH	0x10 /* 4 banks of general purpose registers */
-
 
 /* mov */
 #define	OP_SRC_REG	(1 << 12)

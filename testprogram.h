@@ -48,8 +48,8 @@ void test_result(uint16_t *GP_REG, uint8_t *RAM) {
 	assert(*(RAM + 8200) == 0x0f);
 	assert(*(RAM + 8201) == 0x07);
 	assert(*(GP_REG + 7) == *(GP_REG + 8));
-	assert(*(uint16_t *)(RAM + MEM_START_IO_OUTPUT) == IO_OUT_TST_VAL);
-	assert(*(uint16_t *)(RAM + MEM_START_IO_INPUT) == IO_IN_TST_VAL);
+	assert(*(uint16_t *)(RAM + MEM_IO_OUTPUT) == IO_OUT_TST_VAL);
+	assert(*(uint16_t *)(RAM + MEM_IO_INPUT) == IO_IN_TST_VAL);
 }
 
 const uint32_t program_regression_test[] = {
