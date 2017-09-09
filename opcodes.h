@@ -141,6 +141,10 @@
  *
  * the assembler/compiler need to determine the conversion from
  * [label] to address.
+ * if address is less than ROM start, the value in of GP REG [register]
+ * is used instead. if the address value is above GP REG MAX, an exception
+ * will occur.
+ *
  *
  *  | 0000 1000 | 0000 0000 0000 0000 | 0000 0000 |
  *  0           8                     24          31

@@ -59,6 +59,10 @@ const uint32_t rom[] = {
 	(dichar << 0) | ('-' << 8),
 	(disetxy << 0) | 15  << 8 | (1 << 20),
 	(dichar << 0) | ('1' << 8),
+
+	/* store pc. effectively creating a label that can be used with jmp */
+	(stopc << 0) | (R10 << 8),
+
 	(disetxy << 0) | 12  << 8 | (2 << 20),
 	(dichar << 0) | ('|' << 8),
 	(disetxy << 0) | 12  << 8 | (2 << 20),
@@ -78,10 +82,21 @@ const uint32_t rom[] = {
 	(disetxy << 0) | 12  << 8 | (2 << 20),
 	(dichar << 0) | ('*' << 8),
 
-	/* jump to program memory and start any program loaded
-	 * if no program is loaded we will end up in MEM_START_ROM again.
+	/* check if a program is being loaded */
+	(mov << 0) | (R7 << 8)  | OP_DST_REG | (PRG_LOADING << 16),
+	(cmp << 0) | (R7 << 8) | OP_DST_REG | OP_SRC_MEM | (MEM_PRG_LOADING << 16),
+	/* if no program is being loaded, jump to program memory and start
+	 * any program previously loaded. if no program has been loaded
+	 * we will end up in MEM_START_ROM again.
 	 */
-	(jmp << 0) |  (MEM_START_PRG << 8),
+	(brneq << 0) | (MEM_START_PRG << 16),
+
+	/* mark that a program currently is being loaded */
+	(disetxy << 0) | 15  << 8 | (2 << 20),
+	(dichar << 0) | ('$' << 8),
+
+	/* keep spinning the wheel */
+	(jmp << 0) | R10 << 8,
 
 	(nop << 0),
 	(halt << 0),

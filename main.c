@@ -20,6 +20,7 @@
  */
 
 #include "opcodes.h"
+#include "registers.h"
 #include "exception.h"
 #include "testprogram.h"
 #include "prg.h"
@@ -102,9 +103,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 
+static void mem_setup(void)
+{
+	memset(&machine.RAM, 0x00, RAM_SIZE);
+
+	machine.mach_regs.prg_loading = (uint8_t *)&machine.RAM[MEM_PRG_LOADING];
+}
 
 static void machine_reset(void) {
-	memset(&machine.RAM, 0x00, RAM_SIZE);
+	mem_setup();
 
 	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
 
@@ -120,6 +127,8 @@ static void machine_reset(void) {
 static void machine_load_program(const char filename[], uint16_t addr) {
 	FILE *prog;
 	struct _prg_format program;
+
+	*machine.mach_regs.prg_loading = PRG_LOADING;
 
 	prog = fopen(filename,"rb");
 	fread(&program.header,sizeof(struct _prg_header),1,prog);
@@ -138,10 +147,16 @@ static void machine_load_program(const char filename[], uint16_t addr) {
 	}
 
 	fclose(prog);
+
+	*machine.mach_regs.prg_loading = PRG_LOADING_DONE;
 }
 
 __inline__ static void machine_load_program_local(const uint32_t *prg, uint16_t addr) {
+	*machine.mach_regs.prg_loading = PRG_LOADING;
+
 	memcpy(&machine.RAM[addr], prg + 4, 1024);
+
+	*machine.mach_regs.prg_loading = PRG_LOADING_DONE;
 }
 
 

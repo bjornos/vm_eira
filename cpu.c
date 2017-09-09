@@ -175,7 +175,15 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 			break;
 		case jmp:
 			debug_opcode(dbg_info, dbg_index, "jmp");
-			cpu_regs->pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
+			if ((*instr >> 8) > MEM_START_ROM) {
+				cpu_regs->pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
+			} else {
+				if ((*instr >> 8) > GP_REG_MAX)
+					cpu_regs->exception = EXC_MEM;
+				else
+					cpu_regs->pc = cpu_regs->GP_REG[(*instr >> 8)] - sizeof(uint32_t);
+			}
+
 			debug_result(dbg_info, dbg_index, &cpu_regs->pc);
 			break;
 		case cmp:
@@ -193,7 +201,7 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 				branch(cpu_regs, COND_EQ, (*instr >> 16));
 			else {
 				if (addr > GP_REG_MAX)
-					cpu_regs->exception = EXC_INSTR;
+					cpu_regs->exception = EXC_MEM;
 				else
 					branch(cpu_regs, COND_EQ, cpu_regs->GP_REG[addr]);
 			}
@@ -205,7 +213,7 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 				branch(cpu_regs, COND_NEQ, (*instr >> 16));
 			else {
 				if (addr > GP_REG_MAX)
-					cpu_regs->exception = EXC_INSTR;
+					cpu_regs->exception = EXC_MEM;
 				else
 					branch(cpu_regs, COND_NEQ, cpu_regs->GP_REG[addr]);
 			}

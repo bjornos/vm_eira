@@ -48,5 +48,8 @@
 #define OP_DST_REG	(1 << 14)
 #define OP_DST_MEM	(1 << 15)
 
+#define PRG_LOADING 		0xee
+#define PRG_LOADING_DONE	0x00
+
 
 #endif /* REGISTERS_H_ */

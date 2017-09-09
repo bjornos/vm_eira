@@ -40,10 +40,14 @@
 #include "ioport.h"
 #include "memory.h"
 
+struct _machine_reg {
+		uint8_t *prg_loading;
+};
 
 struct _machine {
 	uint8_t RAM[RAM_SIZE];
 	struct _cpu_regs cpu_regs;
+	struct _machine_reg mach_regs;
 	struct _gpu gpu;
 	struct _display_adapter display;
 	struct _io_regs *ioport;
