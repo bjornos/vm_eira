@@ -122,50 +122,19 @@ static void machine_reset(void) {
 	ioport_reset(&machine);
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
-}
 
-static void machine_load_program(const char filename[], uint16_t addr) {
-	FILE *prog;
-	struct _prg_format program;
-
-	*machine.mach_regs.prg_loading = PRG_LOADING;
-
-	prog = fopen(filename,"rb");
-	fread(&program.header,sizeof(struct _prg_header),1,prog);
-
-	if (program.header.magic == PRG_MAGIC_HEADER) {
-		program.code_segment = malloc(program.header.code_size * sizeof(uint8_t));
-
-		if ((program.header.code_size > (RAM_SIZE - MEM_START_PRG)) ||
-			!program.code_segment) {
-			machine.cpu_regs.exception = EXC_PRG;
-		} else {
-			fread(program.code_segment,program.header.code_size,1,prog);
-			memcpy(&machine.RAM[addr], program.code_segment, program.header.code_size);
-			free(program.code_segment);
-		}
+	if (mkfifo(PRG_lOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
+		perror("failed to create program loader");
 	}
 
-	fclose(prog);
-
-	*machine.mach_regs.prg_loading = PRG_LOADING_DONE;
 }
-
-__inline__ static void machine_load_program_local(const uint32_t *prg, uint16_t addr) {
-	*machine.mach_regs.prg_loading = PRG_LOADING;
-
-	memcpy(&machine.RAM[addr], prg + 4, 1024);
-
-	*machine.mach_regs.prg_loading = PRG_LOADING_DONE;
-}
-
 
 
 
 int main(int argc,char *argv[])
 {
 	struct argp argp = {opts, parse_opt, args_doc, doc};
-	pthread_t display, cpu, gpu, io_in, io_out;
+	pthread_t display, cpu, gpu, io_in, io_out, prg;
 	void *status;
 
 	signal(SIGINT, sig_handler);
@@ -188,12 +157,14 @@ int main(int argc,char *argv[])
 		pthread_create(&io_out, NULL, ioport_machine_output, &machine);
 	}
 
-	machine_load_program_local(rom, MEM_START_ROM);
+	program_load_direct(&machine, rom, MEM_START_ROM);
+
+	pthread_create(&prg, NULL, program_loader, &machine);
 
 	if (args.machine_check)
-		machine_load_program_local(program_regression_test, MEM_START_PRG);
+		program_load_direct(&machine, program_regression_test, MEM_START_PRG);
 	else if (args.load_program)
-		machine_load_program(args.load_program, MEM_START_PRG);
+		program_load(&machine, args.load_program, MEM_START_PRG);
 
 	if (args.debug)
 		machine.cpu_regs.dbg = 1;
@@ -214,6 +185,12 @@ int main(int argc,char *argv[])
 		unlink(IO_INPUT_PORT);
 		unlink(IO_OUTPUT_PORT);
 	}
+
+
+	program_load_cleanup();
+	pthread_join(prg, &status);
+	unlink(PRG_lOAD_FIFO);
+
 
 	if (args.machine_check) {
 		machine.ioport->input = IO_IN_TST_VAL;

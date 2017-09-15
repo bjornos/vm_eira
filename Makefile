@@ -7,14 +7,17 @@ all: vm_eira
 asm2bin: asm2bin.o
 	$(CC) asm2bin.o -o asm2bin
 
-vm_eira: main.o ioport.o cpu.o gpu.o display.o utils.o
-	$(CC) main.o ioport.o cpu.o gpu.o display.o utils.o -o vm_eira $(LFLAGS)
+vm_eira: main.o prg.o ioport.o cpu.o gpu.o display.o utils.o
+	$(CC) main.o prg.o ioport.o cpu.o gpu.o display.o utils.o -o vm_eira $(LFLAGS)
 
 main.o: main.c
 	$(CC) $(CFLAGS) main.c $(LFLAGS)
 
 asm2bin.o: asm2bin.c
 	$(CC) $(CFLAGS) asm2bin.c $(LFLAGS)
+
+prg.o:	prg.c
+	$(CC) $(CFLAGS) prg.c $(LFLAGS)
 
 ioport.o:	ioport.c
 	$(CC) $(CFLAGS) ioport.c $(LFLAGS)

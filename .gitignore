@@ -1,8 +1,2 @@
-cpu.o
-display.o
-main.o
-utils.o
-gpu.o
-ioport.o
 vm_eira
-README.md
+*.o

@@ -14,7 +14,7 @@ The GPU is a co-processor to the main CPU which handles all the display related 
 It works on an instruction list which the main CPU populates whenever it hit a GPU related
 opcode. The default instruction is "wait" which of course means do nothing.
 
-I/O Port
+I/O PORT
 --------
 The Eira machine has an I/O port consisting of 16 inputs and 16 outputs.
 It is possible to set the input port by writing to the file IO_INPUT_PORT (defined in ioport.h)
@@ -30,11 +30,20 @@ Set input pins 2,3,4,6 and 11 high.
 cat <IO_OUPUT_PORT>
 Returns numeric value of 16 bit output port.
 
+LOADING PROGRAMS
+----------------
+The program memory can be loaded when the machine is started using command
+line options or at a later stage by using the internal program loader.
 
-RAM Map
--------
+The program loader is defined in prg.h as PRG_LOADER_FIFO and is used:
+echo <program name> > <PRG_LOADER_FIFO>
+e.g
+echo bin/eira_test.bin > /tmp/eira_prg
 
-0xffff	|-----------------
+MEMORY MAP
+----------
+
+0xffff	|-------------------
 		|
 		|
 		|
@@ -43,7 +52,7 @@ RAM Map
 		|
 		|
 		|
-07fff	|----------------
+07fff	|-------------------
 		|
 		|
 		| PROGRAM MEM
@@ -51,14 +60,17 @@ RAM Map
 		|
 		|
 		|
-0x1000	|----------------
+0x1000	|-------------------
+		|
+		|
+		| I/O MEM
+0x0400	|---------------- addresses below 0x0400 are Read Only
 		|
 		| ROM CODE
-0x0200	|----------------
-		| I/O MEM
-0x01C0	|----------------
+0x0200	|-------------------
 		|
 		|
-		| RESERVED
-0x0000	|----------------
-
+		| MACHINE REGISTERS
+		|
+		|
+0x0000	|-------------------

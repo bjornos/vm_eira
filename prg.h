@@ -22,9 +22,13 @@
 #ifndef __PRG_H_
 #define __PRG_H_
 
+#include "machine.h"
+
 #include <stdint.h>
 
+#define PRG_NAME_MAX		0xff
 #define PRG_MAGIC_HEADER	0xe113a100
+#define PRG_lOAD_FIFO		"/tmp/eira_prg"
 
 struct _prg_header {
 	uint32_t magic;
@@ -37,5 +41,13 @@ struct _prg_format {
 	struct _prg_header header;
 	uint32_t *code_segment;
 };
+
+void program_load(struct _machine *machine, const char filename[], uint16_t addr);
+
+void program_load_direct(struct _machine *machine, const uint32_t *prg, uint16_t addr);
+
+void program_load_cleanup(void);
+
+void *program_loader(void *mach);
 
 #endif /* __PRG_H_ */
