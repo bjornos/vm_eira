@@ -29,11 +29,16 @@
 
 #define MEM_START_PRG		0x1000
 
-#define MEM_START_ROM		0x0200
-
 #define MEM_IO_OUTPUT		(MEM_IO_INPUT + sizeof(uint16_t))
 #define MEM_IO_INPUT		MEM_START_IOPORT
-#define MEM_START_IOPORT	0x01c0
+#define MEM_START_IOPORT	0x0400
+
+/* first kb of RAM is read only and
+ * reserved for the machine
+ */
+#define MEM_START_RW		0x0400
+
+#define MEM_START_ROM		0x0200
 
 #define MEM_PRG_LOADING		0x0100
 

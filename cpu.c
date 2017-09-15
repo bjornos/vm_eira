@@ -106,7 +106,7 @@ static uint16_t cpu_decode_mnemonic(struct _cpu_regs *cpu_regs, uint8_t *RAM, ui
 		local_src = (*instr >> 8) & 0x0f;
 		local_dst = (*instr >> 16) & 0xffff;
 
-		if (local_dst > RAM_SIZE) {
+		if ((local_dst > RAM_SIZE) || (local_dst < MEM_START_RW)) {
 			cpu_regs->exception = EXC_MEM;
 			goto mnemonic_out;
 		}
