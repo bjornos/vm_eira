@@ -198,7 +198,6 @@
 */
 #define brneq		0x13
 
-
 /**
  * instruction: stopc
  *
@@ -212,6 +211,21 @@
  *    instr       register       reserved
 */
 #define stopc		0x14
+
+/**
+ * instruction: rst
+ *
+ * syntax: rst
+ *
+ * force a software reset of the machine
+ *
+ *
+ * | 1010 1000 | 0000 0000 0000 0000 0000 0000 |
+ * 0           8           24
+ *    instr             reserved
+*/
+#define rst		0x15
+
 
 /**
  * instruction: display wait

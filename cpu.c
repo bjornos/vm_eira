@@ -250,7 +250,11 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 }
 
 void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr) {
+	int exc_timeout = 5000;
+
 	printf("!! %s: ",__func__);
+
+	cpu_regs->panic = 1;
 
 	switch(cpu_regs->exception) {
 	case EXC_INSTR:
@@ -274,6 +278,7 @@ void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr) {
 			break;
 	case EXC_SHUTDOWN:
 			printf("machine shutdown ");
+			exc_timeout = 1;
 			break;
 	default:
 			printf("unknown exception %d ",
@@ -283,7 +288,8 @@ void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr) {
 
 	printf("[pc: %ld]\n", cpu_regs->pc);
 
-	cpu_regs->panic = 1;
+	/* guru time... */
+	usleep(1000 * exc_timeout);
 }
 
 long cpu_fetch_instruction(struct _cpu_regs *cpu_regs) {

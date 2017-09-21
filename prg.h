@@ -44,7 +44,8 @@ struct _prg_format {
 
 void program_load(struct _machine *machine, const char filename[], uint16_t addr);
 
-void program_load_direct(struct _machine *machine, const uint32_t *prg, uint16_t addr);
+//void program_load_direct(struct _machine *machine, const uint32_t *prg, uint16_t addr);
+void program_load_direct(struct _machine *machine, const uint32_t *prg, uint16_t addr, int prg_size);
 
 void program_load_cleanup(void);
 

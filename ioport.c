@@ -24,7 +24,7 @@
 #include "machine.h"
 #include "utils.h"
 
-void ioport_reset(void *mach)
+int ioport_reset(void *mach)
 {
 	struct _machine *machine = mach;
 
@@ -32,22 +32,19 @@ void ioport_reset(void *mach)
 	machine->ioport = (struct _io_regs *)&machine->RAM[MEM_START_IOPORT];
 	memset(machine->ioport, 0x00, sizeof(struct _io_regs));
 
-	machine->ioport->active = 0;
+	machine->ioport->active = 1;
 
 	/* create input/output fifo */
 	if (mkfifo(IO_INPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
 		perror("failed to create input port");
-		machine->cpu_regs.exception = EXC_IOPORT;
-		return;
-	}
-	if (mkfifo(IO_OUTPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
+		machine->ioport->active = 0;
+	} else if (mkfifo(IO_OUTPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
 		perror("failed to create output port");
 		unlink(IO_INPUT_PORT);
-		machine->cpu_regs.exception = EXC_IOPORT;
-		return;
+		machine->ioport->active = 0;
 	}
 
-	machine->ioport->active = 1;
+	return machine->ioport->active;
 }
 
 void ioport_shutdown(int input_state)

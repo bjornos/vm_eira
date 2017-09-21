@@ -31,7 +31,7 @@ void program_load(struct _machine *machine, const char filename[], uint16_t addr
 
 	prog = fopen(filename,"rb");
 	if (prog == NULL) {
-		PRG_DEBUG(printf("%s: bad filename.\n",filename));
+		PRG_DEBUG(printf("cannot open program %s\n", filename));
 		return;
 	}
 	PRG_DEBUG(printf("loading %s\n", filename));
@@ -60,10 +60,10 @@ void program_load(struct _machine *machine, const char filename[], uint16_t addr
 	fclose(prog);
 }
 
-void program_load_direct(struct _machine *machine, const uint32_t *prg, uint16_t addr) {
+void program_load_direct(struct _machine *machine, const uint32_t *prg, uint16_t addr, int prg_size) {
 	*machine->mach_regs.prg_loading = PRG_LOADING;
 
-	memcpy(&machine->RAM[addr], prg + 4, 1024);
+	memcpy(&machine->RAM[addr], prg + 4, prg_size);
 
 	*machine->mach_regs.prg_loading = PRG_LOADING_DONE;
 }
@@ -73,7 +73,11 @@ void program_load_cleanup(void)
 	int fd;
 
 	fd = open(PRG_lOAD_FIFO, O_WRONLY);
-	write(fd, NULL, 1);
+	if (fd == -1)
+		return;
+	else
+		write(fd, NULL, 1);
+
 	close(fd);
 }
 
@@ -91,8 +95,8 @@ void *program_loader(void *mach)
 			perror("unable to setup program loader");
 			pthread_exit(NULL);
 		}
-
 		read(fd, prg_name, sizeof(prg_name));
+
 		close(fd);
 
 		/* remove traling newline */

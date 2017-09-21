@@ -35,7 +35,7 @@ struct _io_regs {
 
 
 
-void ioport_reset(void *mach);
+int ioport_reset(void *mach);
 
 void ioport_shutdown(int input_state);
 

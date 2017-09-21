@@ -108,7 +108,12 @@ static void mem_setup(void)
 	memset(&machine.RAM, 0x00, RAM_SIZE);
 
 	machine.mach_regs.prg_loading = (uint8_t *)&machine.RAM[MEM_PRG_LOADING];
+	machine.mach_regs.boot_code = (uint8_t *)&machine.RAM[MEM_BOOT_STATUS];
+
+	*machine.mach_regs.prg_loading = PRG_LOADING_DONE;
+	*machine.mach_regs.boot_code = BOOT_OK;
 }
+
 
 static void machine_reset(void) {
 	mem_setup();
@@ -119,12 +124,14 @@ static void machine_reset(void) {
 
 	display_reset(&machine.display);
 
-	ioport_reset(&machine);
+	if (!ioport_reset(&machine))
+		*machine.mach_regs.boot_code |= BOOT_ERR_IO;
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 
 	if (mkfifo(PRG_lOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
 		perror("failed to create program loader");
+		*machine.mach_regs.boot_code |= BOOT_ERR_PRG;
 	}
 
 }
@@ -146,25 +153,31 @@ int main(int argc,char *argv[])
 
 	argp_parse(&argp,argc,argv,0,0,&args);
 
+machine_soft_reset:
+
 	machine_reset();
 
 	pthread_create(&cpu, NULL, cpu_machine, &machine);
 	pthread_create(&gpu, NULL, gpu_machine, &machine);
 	pthread_create(&display, NULL, display_machine, &machine);
 
-	if (machine.ioport->active) {
+	if (!(*machine.mach_regs.boot_code & BOOT_ERR_PRG))
+		pthread_create(&prg, NULL, program_loader, &machine);
+
+	if (!(*machine.mach_regs.boot_code & BOOT_ERR_IO)) {
 		pthread_create(&io_in, NULL, ioport_machine_input, &machine);
 		pthread_create(&io_out, NULL, ioport_machine_output, &machine);
 	}
 
-	program_load_direct(&machine, rom, MEM_START_ROM);
+	program_load_direct(&machine, rom, MEM_START_ROM, sizeof(rom));
 
-	pthread_create(&prg, NULL, program_loader, &machine);
-
-	if (args.machine_check)
-		program_load_direct(&machine, program_regression_test, MEM_START_PRG);
-	else if (args.load_program)
+	if (args.machine_check) {
+		program_load_direct(&machine, program_regression_test,
+			MEM_START_PRG, sizeof(program_regression_test));
+	}
+	else if (args.load_program) {
 		program_load(&machine, args.load_program, MEM_START_PRG);
+	}
 
 	if (args.debug)
 		machine.cpu_regs.dbg = 1;
@@ -177,7 +190,7 @@ int main(int argc,char *argv[])
 	pthread_join(gpu, &status);
 	pthread_join(display, &status);
 
-	if (machine.ioport->active) {
+	if (!(*machine.mach_regs.boot_code & BOOT_ERR_IO)) {
 		machine.ioport->active = 0;
 		ioport_shutdown((int)machine.ioport->input);
 		pthread_join(io_in, &status);
@@ -186,11 +199,19 @@ int main(int argc,char *argv[])
 		unlink(IO_OUTPUT_PORT);
 	}
 
+	if (!(*machine.mach_regs.boot_code & BOOT_ERR_PRG)) {
+		program_load_cleanup();
+		pthread_join(prg, &status);
+		unlink(PRG_lOAD_FIFO);
+	}
 
-	program_load_cleanup();
-	pthread_join(prg, &status);
-	unlink(PRG_lOAD_FIFO);
-
+	/* soft reboot @ cpu exception */
+	if ((machine.cpu_regs.exception != EXC_SHUTDOWN) &&
+		(machine.cpu_regs.exception != EXC_NONE)) {
+		args.load_program = NULL;
+		args.debug = 0;
+		goto machine_soft_reset;
+	}
 
 	if (args.machine_check) {
 		machine.ioport->input = IO_IN_TST_VAL;

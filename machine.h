@@ -40,8 +40,15 @@
 #include "ioport.h"
 #include "memory.h"
 
+enum {
+	BOOT_OK = 0,
+	BOOT_ERR_IO = 1,
+	BOOT_ERR_PRG = 2,
+};
+
 struct _machine_reg {
 		uint8_t *prg_loading;
+		uint8_t *boot_code;
 };
 
 struct _machine {

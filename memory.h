@@ -40,6 +40,7 @@
 
 #define MEM_START_ROM		0x0200
 
+#define MEM_BOOT_STATUS		0x0101
 #define MEM_PRG_LOADING		0x0100
 
 #endif /* __MEMORY_H_ */
