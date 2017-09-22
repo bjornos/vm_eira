@@ -98,6 +98,8 @@ void *ioport_machine_output(void *mach)
 		nanosleep(&io_clk_freq, NULL);
 	}
 
+	unlink(IO_OUTPUT_PORT);
+
 	pthread_exit(NULL);
 }
 
@@ -121,6 +123,8 @@ void *ioport_machine_input(void *mach)
 
 		machine->ioport->input = atoi(inval);
 	}
+
+	unlink(IO_INPUT_PORT);
 
 	pthread_exit(NULL);
 }

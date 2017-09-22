@@ -104,6 +104,7 @@ void *program_loader(void *mach)
 
 		program_load(machine, prg_name, MEM_START_PRG);
 	}
+	unlink(PRG_lOAD_FIFO);
 
 	pthread_exit(NULL);
 }

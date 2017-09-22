@@ -195,14 +195,11 @@ machine_soft_reset:
 		ioport_shutdown((int)machine.ioport->input);
 		pthread_join(io_in, &status);
 		pthread_join(io_out, &status);
-		unlink(IO_INPUT_PORT);
-		unlink(IO_OUTPUT_PORT);
 	}
 
 	if (!(*machine.mach_regs.boot_code & BOOT_ERR_PRG)) {
 		program_load_cleanup();
 		pthread_join(prg, &status);
-		unlink(PRG_lOAD_FIFO);
 	}
 
 	/* soft reboot @ cpu exception */
