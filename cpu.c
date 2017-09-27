@@ -225,6 +225,10 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 			debug_result(dbg_info, dbg_index, &cpu_regs->pc);
 			cpu_regs->GP_REG[(*instr >> 8)] = cpu_regs->pc;
 			break;
+		case rst:
+			debug_opcode(dbg_info, dbg_index, "rst");
+			cpu_regs->exception = EXC_PRG;
+			break;
 		case dimd:
 		case diclr:
 		case diwtrt:
