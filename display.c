@@ -118,7 +118,7 @@ void *display_machine(void *mach)
 
 	while(!machine->cpu_regs.panic) {
 		if (machine->display.enabled)
-			display_retrace(&machine->display, machine->gpu.frame_buffer);
+			display_retrace(&machine->display, machine->gpu_regs.frame_buffer);
 		nanosleep(&frame_rate, NULL);
 	}
 

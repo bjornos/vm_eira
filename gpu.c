@@ -38,7 +38,7 @@ enum {
 static struct _dbg dbg_info[DBG_HISTORY];
 static int dbg_index;
 
-__inline__ static void gpu_lock(struct _gpu *gpu)
+__inline__ static void gpu_lock(struct _gpu_regs *gpu)
 {
 	while(gpu->instr_lock == GPU_LOCKED)
 		if (gpu->reset)
@@ -46,13 +46,13 @@ __inline__ static void gpu_lock(struct _gpu *gpu)
 	gpu->instr_lock = GPU_LOCKED;
 }
 
-__inline__ static void gpu_unlock(struct _gpu *gpu)
+__inline__ static void gpu_unlock(struct _gpu_regs *gpu)
 {
 	gpu->instr_lock = GPU_UNLOCKED;
 }
 
 
-uint32_t gpu_fetch_instr(struct _gpu *gpu)
+uint32_t gpu_fetch_instr(struct _gpu_regs *gpu)
 {
 	uint32_t instr = diwait;
 
@@ -73,7 +73,7 @@ uint32_t gpu_fetch_instr(struct _gpu *gpu)
 }
 
 
-void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display, uint32_t instr)
+void gpu_decode_instr(struct _gpu_regs *gpu, struct _display_adapter *display, uint32_t instr)
 {
 	uint8_t opcode;
 	int gpu_exception = EXC_NONE;
@@ -120,7 +120,7 @@ void gpu_decode_instr(struct _gpu *gpu, struct _display_adapter *display, uint32
 }
 
 
-void gpu_add_instr(struct _gpu *gpu, uint32_t *instr)
+void gpu_add_instr(struct _gpu_regs *gpu, uint32_t *instr)
 {
 	gpu_lock(gpu);
 
@@ -132,27 +132,29 @@ void gpu_add_instr(struct _gpu *gpu, uint32_t *instr)
 	gpu_unlock(gpu);
 }
 
-void gpu_reset(struct _gpu *gpu, uint8_t *RAM)
+void gpu_reset(void *mach)
 {
-	gpu->reset = 1;
+	struct _machine *machine = mach;
 
-	gpu_lock(gpu);
+	machine->gpu_regs.reset = 1;
 
-	gpu->frame_buffer = RAM + MEM_START_GPU_FB;
+	gpu_lock(&machine->gpu_regs);
+
+	machine->gpu_regs.frame_buffer = machine->RAM + MEM_START_GPU_FB;
 
 	for (int i=0; i<GPU_INSTR_BUFFER_SIZE; i++)
-		gpu->instr_list[i] = diwait;
+		machine->gpu_regs.instr_list[i] = diwait;
 
-	gpu->instr_ptr = 0;
+	machine->gpu_regs.instr_ptr = 0;
 
-	gpu->exception = EXC_NONE;
+	machine->gpu_regs.exception = EXC_NONE;
 
 	for (int d=0; d < DBG_HISTORY; d++)
 		memset(dbg_info + d, 0x00, sizeof(struct _dbg));
 
 	dbg_index = 0;
 
-	gpu_unlock(gpu);
+	gpu_unlock(&machine->gpu_regs);
 }
 
 void gpu_debug_out(void *mach)
@@ -160,11 +162,11 @@ void gpu_debug_out(void *mach)
 	struct _machine *machine = mach;
 
 	printf("GPU Registers\n============\nIP: %d\n",
-		machine->gpu.instr_ptr);
+		machine->gpu_regs.instr_ptr);
 
 	for (int i=0; i<GPU_INSTR_BUFFER_SIZE;i++)
 		printf("instr list %d: 0x%x\n",
-			i,machine->gpu.instr_list[i]);
+			i,machine->gpu_regs.instr_list[i]);
 
 }
 
@@ -179,14 +181,14 @@ void *gpu_machine(void *mach)
 	gpu_clk_freq.tv_sec = 0;
 
 	while(!machine->cpu_regs.panic) {
-		while(machine->gpu.reset);
+		while(machine->gpu_regs.reset);
 
-		instr = gpu_fetch_instr(&machine->gpu);
+		instr = gpu_fetch_instr(&machine->gpu_regs);
 
-		gpu_decode_instr(&machine->gpu, &machine->display, instr);
+		gpu_decode_instr(&machine->gpu_regs, &machine->display, instr);
 
-		if (machine->gpu.exception != EXC_NONE)
-			machine->cpu_regs.exception = machine->gpu.exception;
+		if (machine->gpu_regs.exception != EXC_NONE)
+			machine->cpu_regs.exception = machine->gpu_regs.exception;
 
 		nanosleep(&gpu_clk_freq, NULL);
 	}

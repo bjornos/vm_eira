@@ -27,7 +27,7 @@
 
 #define GPU_INSTR_BUFFER_SIZE	16
 
-struct _gpu {
+struct _gpu_regs {
 	uint8_t *frame_buffer;
 	uint32_t instr_list[GPU_INSTR_BUFFER_SIZE];
 	int instr_ptr;
@@ -37,9 +37,9 @@ struct _gpu {
 };
 
 
-void gpu_add_instr(struct _gpu *gpu, uint32_t *instr);
+void gpu_add_instr(struct _gpu_regs *gpu, uint32_t *instr);
 
-void gpu_reset(struct _gpu *gpu, uint8_t *RAM);
+void gpu_reset(void *mach);
 
 void *gpu_machine(void *mach);
 

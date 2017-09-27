@@ -30,12 +30,6 @@
 
 #define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
 
-typedef enum {
-	RESET_HARD,
-	RESET_SOFT
-} reset_t;
-
-
 typedef struct {
 	int debug;
 	int machine_check;
@@ -120,7 +114,7 @@ static void machine_reset(void) {
 
 	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
 
-	gpu_reset(&machine.gpu, machine.RAM);
+	gpu_reset(&machine);
 
 	display_reset(&machine.display);
 
@@ -183,7 +177,7 @@ machine_soft_reset:
 		machine.cpu_regs.dbg = 1;
 
 	/* release CPU & GPU */
-	machine.gpu.reset = 0;
+	machine.gpu_regs.reset = 0;
 	machine.cpu_regs.reset = 0;
 
 	pthread_join(cpu, &status);

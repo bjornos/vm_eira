@@ -345,7 +345,7 @@ void *cpu_machine(void *mach)
 		cpu_decode_instruction(&machine->cpu_regs, machine->RAM, &machine->display);
 
 		if (machine->cpu_regs.gpu_request)  {
-			gpu_add_instr(&machine->gpu, (uint32_t *)&machine->RAM[instr_p]);
+			gpu_add_instr(&machine->gpu_regs, (uint32_t *)&machine->RAM[instr_p]);
 		}
 
 		if (machine->cpu_regs.exception) {
