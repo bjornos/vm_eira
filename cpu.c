@@ -229,13 +229,31 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 			debug_opcode(dbg_info, dbg_index, "rst");
 			cpu_regs->exception = EXC_PRG;
 			break;
+		case diwait:
+			debug_opcode(dbg_info, dbg_index, "diwait");
+			break;
 		case dimd:
+			display_request(display, instr, NULL, DISPLAY_INIT);
+			debug_opcode(dbg_info, dbg_index, "dimd");
+			break;
 		case diclr:
+			debug_opcode(dbg_info, dbg_index, "diclr");
+			cpu_regs->exception =
+				display_request(display, instr, NULL, DISPLAY_CLR);
+			break;
 		case diwtrt:
+			debug_opcode(dbg_info, dbg_index, "diwtrt");
+			display_wait_retrace(display);
+			break;
 		case disetxy:
+			debug_opcode(dbg_info, dbg_index, "setposxy");
+			display_request(display, instr, NULL, DISPLAY_SETXY);
+			break;
 		case dichar:
-			debug_opcode(dbg_info, dbg_index, "<gpu code>");
-			cpu_regs->gpu_request = 1;
+			debug_opcode(dbg_info, dbg_index, "putchar");
+			display_wait_retrace(display);
+			display_request(display, instr, NULL, DISPLAY_SETC);
+			break;
 			break;
 		default: cpu_regs->exception = EXC_INSTR;
 			break;
@@ -347,10 +365,6 @@ void *cpu_machine(void *mach)
 
 		instr_p = cpu_fetch_instruction(&machine->cpu_regs);
 		cpu_decode_instruction(&machine->cpu_regs, machine->RAM, &machine->display);
-
-		if (machine->cpu_regs.gpu_request)  {
-			gpu_add_instr(&machine->gpu_regs, (uint32_t *)&machine->RAM[instr_p]);
-		}
 
 		if (machine->cpu_regs.exception) {
 			display_wait_retrace(&machine->display);

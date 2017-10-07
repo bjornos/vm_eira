@@ -18,12 +18,11 @@ static const struct _adapter_mode adapter_mode[] = {
 };
 
 
-void display_retrace(struct _display_adapter *display, uint8_t *frame_buffer)
+void display_retrace(struct _display_adapter *display)
 {
 	int cx,cy,addr;
 
-	if (!frame_buffer) {
-		//throw_exception(display);
+	if (!display->frame_buffer) {
 		printf("No display mem!\n");
 		return;
 	}
@@ -34,7 +33,7 @@ void display_retrace(struct _display_adapter *display, uint8_t *frame_buffer)
 		addr = (cy * adapter_mode[display->mode].vertical);
 		for (cx=0; cx < adapter_mode[display->mode].vertical; cx++) {
 			gotoxy(cx,cy);
-			putchar((char)*(frame_buffer + addr) & 0xff);
+			putchar((char)*(display->frame_buffer + addr) & 0xff);
 			addr++;
 		}
 	}
@@ -63,7 +62,7 @@ int display_set_mode(struct _display_adapter *display, uint8_t *frame_buffer, di
 	else
 		return EXC_DISP;
 
-	memset(frame_buffer,' ', adapter_mode[display->mode].resolution);
+	memset(display->frame_buffer,' ', adapter_mode[display->mode].resolution);
 	display->refresh = 0;
 	display->enabled = 1;
 
@@ -93,10 +92,10 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 		case DISPLAY_SETC:
 			addr = (display->y * adapter_mode[display->mode].vertical) + display->x;
 			display->c = (*instr >> 8) & 0xff;
-			*(frame_buffer + addr) = display->c;
+			*(display->frame_buffer + addr) = display->c;
 			break;
 		case DISPLAY_CLR:
-			memset(&frame_buffer[0], ' ', adapter_mode[display->mode].resolution);
+			memset(&display->frame_buffer[0], ' ', adapter_mode[display->mode].resolution);
 			break;
 		default:
 			ret = EXC_DISP;
@@ -118,7 +117,7 @@ void *display_machine(void *mach)
 
 	while(!machine->cpu_regs.panic) {
 		if (machine->display.enabled)
-			display_retrace(&machine->display, machine->gpu_regs.frame_buffer);
+			display_retrace(&machine->display);
 		nanosleep(&frame_rate, NULL);
 	}
 

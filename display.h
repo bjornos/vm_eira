@@ -56,6 +56,7 @@ typedef enum {
 
 
 struct _display_adapter {
+	uint8_t *frame_buffer;
  	uint16_t x;
 	uint16_t y;
 	char c;
@@ -64,7 +65,7 @@ struct _display_adapter {
 	int enabled;
 };
 
-void display_retrace(struct _display_adapter *display, uint8_t *frame_buffer);
+void display_retrace(struct _display_adapter *display);
 
 void display_wait_retrace(struct _display_adapter *display);
 

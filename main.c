@@ -101,6 +101,8 @@ static void mem_setup(void)
 {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
 
+	machine.display.frame_buffer = machine.RAM + MEM_START_GPU_FB;
+
 	machine.mach_regs.prg_loading = (uint8_t *)&machine.RAM[MEM_PRG_LOADING];
 	machine.mach_regs.boot_code = (uint8_t *)&machine.RAM[MEM_BOOT_STATUS];
 
@@ -113,8 +115,6 @@ static void machine_reset(void) {
 	mem_setup();
 
 	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
-
-	gpu_reset(&machine);
 
 	display_reset(&machine.display);
 
@@ -135,7 +135,7 @@ static void machine_reset(void) {
 int main(int argc,char *argv[])
 {
 	struct argp argp = {opts, parse_opt, args_doc, doc};
-	pthread_t display, cpu, gpu, io_in, io_out, prg;
+	pthread_t display, cpu, io_in, io_out, prg;
 	void *status;
 
 	signal(SIGINT, sig_handler);
@@ -152,7 +152,6 @@ machine_soft_reset:
 	machine_reset();
 
 	pthread_create(&cpu, NULL, cpu_machine, &machine);
-	pthread_create(&gpu, NULL, gpu_machine, &machine);
 	pthread_create(&display, NULL, display_machine, &machine);
 
 	if (!(*machine.mach_regs.boot_code & BOOT_ERR_PRG))
@@ -176,12 +175,10 @@ machine_soft_reset:
 	if (args.debug)
 		machine.cpu_regs.dbg = 1;
 
-	/* release CPU & GPU */
-	machine.gpu_regs.reset = 0;
+	/* release CPU */
 	machine.cpu_regs.reset = 0;
 
 	pthread_join(cpu, &status);
-	pthread_join(gpu, &status);
 	pthread_join(display, &status);
 
 	if (!(*machine.mach_regs.boot_code & BOOT_ERR_IO)) {
