@@ -233,13 +233,13 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 			debug_opcode(dbg_info, dbg_index, "diwait");
 			break;
 		case dimd:
-			display_request(display, instr, NULL, DISPLAY_INIT);
+			display_request(display, instr, DISPLAY_INIT);
 			debug_opcode(dbg_info, dbg_index, "dimd");
 			break;
 		case diclr:
 			debug_opcode(dbg_info, dbg_index, "diclr");
 			cpu_regs->exception =
-				display_request(display, instr, NULL, DISPLAY_CLR);
+				display_request(display, instr, DISPLAY_CLR);
 			break;
 		case diwtrt:
 			debug_opcode(dbg_info, dbg_index, "diwtrt");
@@ -247,12 +247,12 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 			break;
 		case disetxy:
 			debug_opcode(dbg_info, dbg_index, "setposxy");
-			display_request(display, instr, NULL, DISPLAY_SETXY);
+			display_request(display, instr, DISPLAY_SETXY);
 			break;
 		case dichar:
 			debug_opcode(dbg_info, dbg_index, "putchar");
 			display_wait_retrace(display);
-			display_request(display, instr, NULL, DISPLAY_SETC);
+			display_request(display, instr, DISPLAY_SETC);
 			break;
 			break;
 		default: cpu_regs->exception = EXC_INSTR;

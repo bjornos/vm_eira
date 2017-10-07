@@ -70,7 +70,7 @@ int display_set_mode(struct _display_adapter *display, uint8_t *frame_buffer, di
 }
 
 int display_request(struct _display_adapter *display, uint32_t *instr,
-	uint8_t *frame_buffer, int request)
+	int request)
 {
 	int addr = 0;
 	int ret = EXC_NONE;
@@ -83,7 +83,7 @@ int display_request(struct _display_adapter *display, uint32_t *instr,
 	switch(request) {
 		case DISPLAY_INIT:
 			ret =
-				display_set_mode(display, frame_buffer, (*instr >> 8));
+				display_set_mode(display, display->frame_buffer, (*instr >> 8));
 			break;
 		case DISPLAY_SETXY:
 			display->x = (*instr >> 8) & 0xfff;

@@ -70,7 +70,7 @@ void display_retrace(struct _display_adapter *display);
 void display_wait_retrace(struct _display_adapter *display);
 
 int display_request(struct _display_adapter *display, uint32_t *instr,
-	uint8_t *frame_buffer, int request);
+	int request);
 
 void display_reset(struct _display_adapter *display);
 
