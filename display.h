@@ -41,6 +41,7 @@ struct _cursor_data {
 
 enum display_adapter_capabilities {
 	DISPLAY_INIT,
+	DISPLAY_WAIT_RETRACE,
 	DISPLAY_SETXY,
 	DISPLAY_GETXY,
 	DISPLAY_SETC,
@@ -65,14 +66,9 @@ struct _display_adapter {
 	int enabled;
 };
 
-void display_retrace(struct _display_adapter *display);
+int display_request(void *mach, int request);
 
-void display_wait_retrace(struct _display_adapter *display);
-
-int display_request(struct _display_adapter *display, uint32_t *instr,
-	int request);
-
-void display_reset(struct _display_adapter *display);
+void display_reset(void *mach);
 
 void *display_machine(void *mach);
 

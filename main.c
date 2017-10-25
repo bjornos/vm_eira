@@ -116,7 +116,7 @@ static void machine_reset(void) {
 
 	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
 
-	display_reset(&machine.display);
+	display_reset(&machine);
 
 	if (!ioport_reset(&machine))
 		*machine.mach_regs.boot_code |= BOOT_ERR_IO;

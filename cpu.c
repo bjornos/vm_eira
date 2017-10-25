@@ -124,8 +124,9 @@ mnemonic_out:
 		return src;
 }
 
-void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display)
+void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display, void *mach)
 {
+	struct _machine *machine = mach;
 	uint8_t opcode;
 	uint32_t *instr;
 	uint16_t src;
@@ -233,33 +234,36 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 			debug_opcode(dbg_info, dbg_index, "diwait");
 			break;
 		case dimd:
-			display_request(display, instr, DISPLAY_INIT);
 			debug_opcode(dbg_info, dbg_index, "dimd");
+			cpu_regs->exception =
+				display_request(machine, DISPLAY_INIT);
 			break;
 		case diclr:
 			debug_opcode(dbg_info, dbg_index, "diclr");
 			cpu_regs->exception =
-				display_request(display, instr, DISPLAY_CLR);
+				display_request(machine, DISPLAY_CLR);
 			break;
 		case diwtrt:
 			debug_opcode(dbg_info, dbg_index, "diwtrt");
-			display_wait_retrace(display);
+			cpu_regs->exception =
+				display_request(machine, DISPLAY_WAIT_RETRACE);
 			break;
 		case disetxy:
 			debug_opcode(dbg_info, dbg_index, "setposxy");
-			display_request(display, instr, DISPLAY_SETXY);
+			cpu_regs->exception =
+				display_request(machine, DISPLAY_SETXY);
 			break;
 		case dichar:
 			debug_opcode(dbg_info, dbg_index, "putchar");
-			display_wait_retrace(display);
-			display_request(display, instr, DISPLAY_SETC);
+			cpu_regs->exception =
+				display_request(machine, DISPLAY_SETC);
 			break;
 			break;
 		default: cpu_regs->exception = EXC_INSTR;
 			break;
 	}
 
-	if (cpu_regs->dbg) {
+	if (cpu_regs->dbg) { // consider move this into debug_opcode so that it will show in case of hang
 		//display_wait_retrace(display);
 		//display->enabled = 0;
 		gotoxy(1,15);
@@ -364,12 +368,10 @@ void *cpu_machine(void *mach)
 		while(machine->cpu_regs.reset);
 
 		instr_p = cpu_fetch_instruction(&machine->cpu_regs);
-		cpu_decode_instruction(&machine->cpu_regs, machine->RAM, &machine->display);
+		cpu_decode_instruction(&machine->cpu_regs, machine->RAM, &machine->display, machine);
 
-		if (machine->cpu_regs.exception) {
-			display_wait_retrace(&machine->display);
+		if (machine->cpu_regs.exception)
 			cpu_handle_exception(&machine->cpu_regs, (uint32_t *)&machine->RAM[instr_p]);
-		}
 
 		nanosleep(&cpu_clk_freq, NULL);
 	}

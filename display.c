@@ -18,12 +18,12 @@ static const struct _adapter_mode adapter_mode[] = {
 };
 
 
-void display_retrace(struct _display_adapter *display)
+static void display_retrace(struct _display_adapter *display)
 {
 	int cx,cy,addr;
 
 	if (!display->frame_buffer) {
-		printf("No display mem!\n");
+		fprintf(stderr, "No display mem!\n");
 		return;
 	}
 
@@ -41,17 +41,12 @@ void display_retrace(struct _display_adapter *display)
 	display->refresh = 0;
 }
 
-void display_wait_retrace(struct _display_adapter *display)
+static void display_wait_retrace(struct _display_adapter *display)
 {
 	while(display->refresh);
 }
 
-void display_reset(struct _display_adapter *display)
-{
-	display->enabled = 0;
-}
-
-int display_set_mode(struct _display_adapter *display, uint8_t *frame_buffer, display_mode this_mode)
+static int display_set_mode(struct _display_adapter *display, uint8_t *frame_buffer, display_mode this_mode)
 {
 	display->x = 0;
 	display->y = 0;
@@ -69,33 +64,49 @@ int display_set_mode(struct _display_adapter *display, uint8_t *frame_buffer, di
 	return EXC_NONE;
 }
 
-int display_request(struct _display_adapter *display, uint32_t *instr,
-	int request)
+void display_reset(void *mach)
 {
+	struct _machine *machine = mach;
+
+	machine->display.enabled = 0;
+	machine->display.refresh = 0;
+}
+
+int display_request(void *mach, int request)
+
+{
+	struct _machine *machine = mach;
 	int addr = 0;
 	int ret = EXC_NONE;
+	uint32_t *instr;
 
-	if (!display->enabled && (request != DISPLAY_INIT))
+	if ((machine == NULL) || (&machine->display == NULL))
 		return EXC_DISP;
 
-	display_wait_retrace(display);
+	if (!machine->display.enabled && (request != DISPLAY_INIT))
+		return EXC_DISP;
+
+	instr = (uint32_t *)&machine->RAM[machine->cpu_regs.pc];
 
 	switch(request) {
+		case DISPLAY_WAIT_RETRACE:
+			display_wait_retrace(&machine->display);
+		break;
 		case DISPLAY_INIT:
 			ret =
-				display_set_mode(display, display->frame_buffer, (*instr >> 8));
-			break;
+				display_set_mode(&machine->display, machine->display.frame_buffer, (*instr >> 8));
+		break;
 		case DISPLAY_SETXY:
-			display->x = (*instr >> 8) & 0xfff;
-			display->y = (*instr >> 20) & 0xfff;
+			machine->display.x = (*instr >> 8) & 0xfff;
+			machine->display.y = (*instr >> 20) & 0xfff;
 			break;
 		case DISPLAY_SETC:
-			addr = (display->y * adapter_mode[display->mode].vertical) + display->x;
-			display->c = (*instr >> 8) & 0xff;
-			*(display->frame_buffer + addr) = display->c;
+			addr = (machine->display.y * adapter_mode[machine->display.mode].vertical) + machine->display.x;
+			machine->display.c = (*instr >> 8) & 0xff;
+			*(machine->display.frame_buffer + addr) = machine->display.c;
 			break;
 		case DISPLAY_CLR:
-			memset(&display->frame_buffer[0], ' ', adapter_mode[display->mode].resolution);
+			memset(&machine->display.frame_buffer[0], ' ', adapter_mode[machine->display.mode].resolution);
 			break;
 		default:
 			ret = EXC_DISP;
