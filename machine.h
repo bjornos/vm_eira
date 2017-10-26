@@ -40,6 +40,8 @@
 #include "ioport.h"
 #include "memory.h"
 
+#define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
+
 enum {
 	BOOT_OK = 0,
 	BOOT_ERR_IO = 1,

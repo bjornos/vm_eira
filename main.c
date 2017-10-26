@@ -28,7 +28,7 @@
 #include "utils.h"
 #include "machine.h"
 
-#define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
+//#define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
 
 typedef struct {
 	int debug;
@@ -114,7 +114,7 @@ static void mem_setup(void)
 static void machine_reset(void) {
 	mem_setup();
 
-	cpu_reset(&machine.cpu_regs, MACHINE_RESET_VECTOR);
+	cpu_reset(&machine);
 
 	display_reset(&machine);
 

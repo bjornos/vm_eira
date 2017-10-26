@@ -54,13 +54,13 @@ struct _cpu_regs {
 	unsigned char panic;		/* halt cpu */
 };
 
-void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display, void *mach);
+//void cpu_decode_instruction(void *mach);
 
-void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr);
+//void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr);
 
-void cpu_reset(struct _cpu_regs *cpu_regs, uint32_t reset_vector);
+void cpu_reset(void *mach);
 
-long cpu_fetch_instruction(struct _cpu_regs *cpu_regs);
+//long cpu_fetch_instruction(struct _cpu_regs *cpu_regs);
 
 void *cpu_machine(void *mach);
 

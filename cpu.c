@@ -124,7 +124,7 @@ mnemonic_out:
 		return src;
 }
 
-void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _display_adapter *display, void *mach)
+static void cpu_decode_instruction(void *mach)
 {
 	struct _machine *machine = mach;
 	uint8_t opcode;
@@ -133,10 +133,10 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 	uint16_t *dst;
 	uint16_t addr;
 
-	if (cpu_regs->exception)
+	if (machine->cpu_regs.exception)
 		return;
 
-	instr = (uint32_t *)&RAM[cpu_regs->pc];
+	instr = (uint32_t *)&machine->RAM[machine->cpu_regs.pc];
 
 	debug_instr(dbg_info, dbg_index, instr);
 
@@ -148,177 +148,180 @@ void cpu_decode_instruction(struct _cpu_regs *cpu_regs, uint8_t *RAM, struct _di
 			break;
 		case halt:
 			debug_opcode(dbg_info, dbg_index, "halt");
-			cpu_regs->panic = 1;
+			machine->cpu_regs.panic = 1;
 			break;
 		case mov:
 			debug_opcode(dbg_info, dbg_index, "mov");
-			src = cpu_decode_mnemonic(cpu_regs, RAM, instr, &dst, SIZE_BYTE);
-			if (!cpu_regs->exception)
+			src = cpu_decode_mnemonic(&machine->cpu_regs, machine->RAM, instr, &dst, SIZE_BYTE);
+			if (!machine->cpu_regs.exception);
 				*dst = src;
 			break;
 		case movi:
 			debug_opcode(dbg_info, dbg_index, "movi");
-			src = cpu_decode_mnemonic(cpu_regs, RAM, instr, &dst, SIZE_INT);
-			if (!cpu_regs->exception)
+			src = cpu_decode_mnemonic(&machine->cpu_regs, machine->RAM, instr, &dst, SIZE_INT);
+			if (!machine->cpu_regs.exception)
 				*dst = src;
 			break;
 		case add:
 			debug_opcode(dbg_info, dbg_index, "add");
-			src = cpu_decode_mnemonic(cpu_regs, RAM, instr, &dst,SIZE_BYTE);
-			if (!cpu_regs->exception)
+			src = cpu_decode_mnemonic(&machine->cpu_regs, machine->RAM, instr, &dst,SIZE_BYTE);
+			if (!machine->cpu_regs.exception)
 				*dst += src;
 			break;
 		case sub:
 			debug_opcode(dbg_info, dbg_index, "sub");
-			src = cpu_decode_mnemonic(cpu_regs, RAM, instr, &dst,SIZE_BYTE);
-			if (!cpu_regs->exception)
+			src = cpu_decode_mnemonic(&machine->cpu_regs, machine->RAM, instr, &dst,SIZE_BYTE);
+			if (!machine->cpu_regs.exception)
 				*dst -= src;
 			break;
 		case jmp:
 			debug_opcode(dbg_info, dbg_index, "jmp");
 			if ((*instr >> 8) > MEM_START_ROM) {
-				cpu_regs->pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
+				machine->cpu_regs.pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
 			} else {
 				if ((*instr >> 8) > GP_REG_MAX)
-					cpu_regs->exception = EXC_MEM;
+					machine->cpu_regs.exception = EXC_MEM;
 				else
-					cpu_regs->pc = cpu_regs->GP_REG[(*instr >> 8)] - sizeof(uint32_t);
+					machine->cpu_regs.pc = machine->cpu_regs.GP_REG[(*instr >> 8)] - sizeof(uint32_t);
 			}
 
-			debug_result(dbg_info, dbg_index, &cpu_regs->pc);
+			debug_result(dbg_info, dbg_index, &machine->cpu_regs.pc);
 			break;
 		case cmp:
 			debug_opcode(dbg_info, dbg_index, "cmp");
-			cpu_regs->cr &= COND_UNDEF;
-			src = cpu_decode_mnemonic(cpu_regs, RAM, instr, &dst, SIZE_INT);
-			compare(cpu_regs, src, *dst);
+			machine->cpu_regs.cr &= COND_UNDEF;
+			src = cpu_decode_mnemonic(&machine->cpu_regs, machine->RAM, instr, &dst, SIZE_INT);
+			compare(&machine->cpu_regs, src, *dst);
 			debug_args(dbg_info, dbg_index, &src, dst);
-			debug_result(dbg_info, dbg_index, (long *)&cpu_regs->cr);
+			debug_result(dbg_info, dbg_index, (long *)&machine->cpu_regs.cr);
 			break;
 		case breq:
 			debug_opcode(dbg_info, dbg_index, "breq");
 			addr = (*instr >> 16);
 			if (addr > MEM_START_ROM)
-				branch(cpu_regs, COND_EQ, (*instr >> 16));
+				branch(&machine->cpu_regs, COND_EQ, (*instr >> 16));
 			else {
 				if (addr > GP_REG_MAX)
-					cpu_regs->exception = EXC_MEM;
+					machine->cpu_regs.exception = EXC_MEM;
 				else
-					branch(cpu_regs, COND_EQ, cpu_regs->GP_REG[addr]);
+					branch(&machine->cpu_regs, COND_EQ, machine->cpu_regs.GP_REG[addr]);
 			}
 			break;
 		case brneq:
 			debug_opcode(dbg_info, dbg_index, "brneq");
 			addr = (*instr >> 16);
 			if (addr > MEM_START_ROM)
-				branch(cpu_regs, COND_NEQ, (*instr >> 16));
+				branch(&machine->cpu_regs, COND_NEQ, (*instr >> 16));
 			else {
 				if (addr > GP_REG_MAX)
-					cpu_regs->exception = EXC_MEM;
+					machine->cpu_regs.exception = EXC_MEM;
 				else
-					branch(cpu_regs, COND_NEQ, cpu_regs->GP_REG[addr]);
+					branch(&machine->cpu_regs, COND_NEQ, machine->cpu_regs.GP_REG[addr]);
 			}
 			break;
 		case stopc:
 			debug_opcode(dbg_info, dbg_index, "stopc");
 			addr = (*instr >> 8);
 			debug_args(dbg_info, dbg_index, &addr, NULL);
-			debug_result(dbg_info, dbg_index, &cpu_regs->pc);
-			cpu_regs->GP_REG[(*instr >> 8)] = cpu_regs->pc;
+			debug_result(dbg_info, dbg_index, &machine->cpu_regs.pc);
+			machine->cpu_regs.GP_REG[(*instr >> 8)] = machine->cpu_regs.pc;
 			break;
 		case rst:
 			debug_opcode(dbg_info, dbg_index, "rst");
-			cpu_regs->exception = EXC_PRG;
+			machine->cpu_regs.exception = EXC_PRG;
 			break;
 		case diwait:
 			debug_opcode(dbg_info, dbg_index, "diwait");
 			break;
 		case dimd:
 			debug_opcode(dbg_info, dbg_index, "dimd");
-			cpu_regs->exception =
+			machine->cpu_regs.exception =
 				display_request(machine, DISPLAY_INIT);
 			break;
 		case diclr:
 			debug_opcode(dbg_info, dbg_index, "diclr");
-			cpu_regs->exception =
+			machine->cpu_regs.exception =
 				display_request(machine, DISPLAY_CLR);
 			break;
 		case diwtrt:
 			debug_opcode(dbg_info, dbg_index, "diwtrt");
-			cpu_regs->exception =
+			machine->cpu_regs.exception =
 				display_request(machine, DISPLAY_WAIT_RETRACE);
 			break;
 		case disetxy:
 			debug_opcode(dbg_info, dbg_index, "setposxy");
-			cpu_regs->exception =
+			machine->cpu_regs.exception =
 				display_request(machine, DISPLAY_SETXY);
 			break;
 		case dichar:
 			debug_opcode(dbg_info, dbg_index, "putchar");
-			cpu_regs->exception =
+			machine->cpu_regs.exception =
 				display_request(machine, DISPLAY_SETC);
 			break;
 			break;
-		default: cpu_regs->exception = EXC_INSTR;
+		default: machine->cpu_regs.exception = EXC_INSTR;
 			break;
 	}
 
-	if (cpu_regs->dbg) { // consider move this into debug_opcode so that it will show in case of hang
+	if (machine->cpu_regs.dbg) { // consider move this into debug_opcode so that it will show in case of hang
 		//display_wait_retrace(display);
 		//display->enabled = 0;
 		gotoxy(1,15);
 		dump_instr(dbg_info, dbg_index);
 		gotoxy(1,15 + DBG_HISTORY + 4);
-		dump_regs(cpu_regs->GP_REG);
+		dump_regs(machine->cpu_regs.GP_REG);
 		//display->enabled = 1; /* fixme: bug*/
 	}
 
 }
 
-void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr) {
-	int exc_timeout = 5000;
+static void cpu_handle_exception(void *mach)
+{
+	struct _machine *machine = mach;
+	int exception_keepalive = 5000;
 
 	printf("!! %s: ",__func__);
 
-	cpu_regs->panic = 1;
+	machine->cpu_regs.panic = 1;
 
-	switch(cpu_regs->exception) {
+	switch(machine->cpu_regs.exception) {
 	case EXC_INSTR:
-			printf("illegal instruction 0x%X ",	*instr);//machine.RAM[pc]
-			break;
+			printf("illegal instruction @0x%X ", (uint32_t)machine->RAM[machine->cpu_regs.pc]);
+		break;
 	case EXC_MEM:
 			printf("cannot access memory ");
-			break;
+	break;
 	case EXC_REG:
 			printf("cannot access register ");
-			break;
+	break;
 	case EXC_PRG:
 			printf("stray program ");
-			break;
+	break;
 	case EXC_DISP:
 	case EXC_GPU:
 			printf("display error ");
-			break;
+	break;
 	case EXC_IOPORT:
 			printf("I/O error ");
-			break;
+	break;
 	case EXC_SHUTDOWN:
 			printf("machine shutdown ");
-			exc_timeout = 1;
-			break;
+			exception_keepalive = 1;
+	break;
 	default:
 			printf("unknown exception %d ",
-				cpu_regs->exception);
-			break;
+				machine->cpu_regs.exception);
+	break;
 	}
 
-	printf("[pc: %ld]\n", cpu_regs->pc);
+	printf("[pc: %ld]\n", machine->cpu_regs.pc);
 
 	/* guru time... */
-	usleep(1000 * exc_timeout);
+	usleep(1000 * exception_keepalive);
 }
 
-long cpu_fetch_instruction(struct _cpu_regs *cpu_regs) {
+static void cpu_fetch_instruction(struct _cpu_regs *cpu_regs)
+{
 	/* each instruction is 4 bytes */
 	cpu_regs->pc += sizeof(uint32_t);
 	if (cpu_regs->pc >= (RAM_SIZE - 3))
@@ -328,22 +331,22 @@ long cpu_fetch_instruction(struct _cpu_regs *cpu_regs) {
 	memset(dbg_info + dbg_index, 0x00, sizeof(struct _dbg));
 
 	cpu_regs->gpu_request = 0;
-
-	return cpu_regs->pc;
 }
 
-void cpu_reset(struct _cpu_regs *cpu_regs, uint32_t reset_vector) {
-	memset(cpu_regs->GP_REG, 0x00, GP_REG_MAX);
+void cpu_reset(void *mach)
+{
+	struct _machine *machine = mach;
 
-	cpu_regs->reset = 1;
-	cpu_regs->sp = 0;
-	cpu_regs->exception = EXC_NONE;
-	cpu_regs->panic = 0;
-	cpu_regs->cr = COND_UNDEF;
-	cpu_regs->dbg = 0;
-	cpu_regs->gpu_request = 0;
+	memset(machine->cpu_regs.GP_REG, 0x00, GP_REG_MAX);
 
-	cpu_regs->pc = reset_vector;
+	machine->cpu_regs.reset = 1;
+	machine->cpu_regs.sp = 0;
+	machine->cpu_regs.exception = EXC_NONE;
+	machine->cpu_regs.panic = 0;
+	machine->cpu_regs.cr = COND_UNDEF;
+	machine->cpu_regs.dbg = 0;
+	machine->cpu_regs.gpu_request = 0;
+	machine->cpu_regs.pc = MACHINE_RESET_VECTOR;
 
 	// (if regs->dbg)
 	for (int d=0; d < DBG_HISTORY; d++)
@@ -358,7 +361,6 @@ void *cpu_machine(void *mach)
 {
 	struct _machine *machine = mach;
 	struct timespec cpu_clk_freq;
-	long instr_p;
 	int hz = 10; /* 10 Hz */
 
 	cpu_clk_freq.tv_nsec = 1000000000 / hz;
@@ -367,11 +369,11 @@ void *cpu_machine(void *mach)
 	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
-		instr_p = cpu_fetch_instruction(&machine->cpu_regs);
-		cpu_decode_instruction(&machine->cpu_regs, machine->RAM, &machine->display, machine);
+		cpu_fetch_instruction(&machine->cpu_regs);
+		cpu_decode_instruction(machine);
 
 		if (machine->cpu_regs.exception)
-			cpu_handle_exception(&machine->cpu_regs, (uint32_t *)&machine->RAM[instr_p]);
+			cpu_handle_exception(machine);
 
 		nanosleep(&cpu_clk_freq, NULL);
 	}
