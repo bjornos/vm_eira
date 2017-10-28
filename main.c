@@ -28,8 +28,6 @@
 #include "utils.h"
 #include "machine.h"
 
-//#define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
-
 typedef struct {
 	int debug;
 	int machine_check;
@@ -96,8 +94,23 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	return 0;
 }
 
+static __inline__ int machine_error_is_set(machine_boot_err err_code)
+{
+	if (*machine.mach_regs.boot_code & err_code)
+		return 1;
 
-static void mem_setup(void)
+	return 0;
+}
+static __inline__ void machine_error_set(machine_boot_err err_code)
+{
+	*machine.mach_regs.boot_code |= err_code;
+}
+static __inline__ int machine_error_is_clear(machine_boot_err err_code)
+{
+	return !machine_error_is_set(err_code);
+}
+
+static __inline__ void mem_setup(void)
 {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
 
@@ -119,13 +132,13 @@ static void machine_reset(void) {
 	display_reset(&machine);
 
 	if (!ioport_reset(&machine))
-		*machine.mach_regs.boot_code |= BOOT_ERR_IO;
+		machine_error_set(BOOT_ERR_IO);
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 
-	if (mkfifo(PRG_lOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
+	if (mkfifo(PRG_LOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
 		perror("failed to create program loader");
-		*machine.mach_regs.boot_code |= BOOT_ERR_PRG;
+		machine_error_set(BOOT_ERR_PRG);
 	}
 
 }
@@ -154,26 +167,27 @@ machine_soft_reset:
 	pthread_create(&cpu, NULL, cpu_machine, &machine);
 	pthread_create(&display, NULL, display_machine, &machine);
 
-	if (!(*machine.mach_regs.boot_code & BOOT_ERR_PRG))
+	if (machine_error_is_clear(BOOT_ERR_PRG))
 		pthread_create(&prg, NULL, program_loader, &machine);
 
-	if (!(*machine.mach_regs.boot_code & BOOT_ERR_IO)) {
+	if (machine_error_is_clear(BOOT_ERR_IO)) {
 		pthread_create(&io_in, NULL, ioport_machine_input, &machine);
 		pthread_create(&io_out, NULL, ioport_machine_output, &machine);
 	}
 
 	program_load_direct(&machine, rom, MEM_START_ROM, sizeof(rom));
 
+
+	if (args.load_program) {
+		program_load(&machine, args.load_program, MEM_START_PRG);
+	}
+	/* checktest override load program */
 	if (args.machine_check) {
 		program_load_direct(&machine, program_regression_test,
 			MEM_START_PRG, sizeof(program_regression_test));
 	}
-	else if (args.load_program) {
-		program_load(&machine, args.load_program, MEM_START_PRG);
-	}
 
-	if (args.debug)
-		machine.cpu_regs.dbg = 1;
+	machine.cpu_regs.dbg = args.debug ? 1 : 0;
 
 	/* release CPU */
 	machine.cpu_regs.reset = 0;
@@ -181,21 +195,20 @@ machine_soft_reset:
 	pthread_join(cpu, &status);
 	pthread_join(display, &status);
 
-	if (!(*machine.mach_regs.boot_code & BOOT_ERR_IO)) {
+	if (machine_error_is_clear(BOOT_ERR_IO)) {
 		machine.ioport->active = 0;
 		ioport_shutdown((int)machine.ioport->input);
 		pthread_join(io_in, &status);
 		pthread_join(io_out, &status);
 	}
 
-	if (!(*machine.mach_regs.boot_code & BOOT_ERR_PRG)) {
+	if (machine_error_is_clear(BOOT_ERR_PRG)) {
 		program_load_cleanup();
 		pthread_join(prg, &status);
 	}
 
 	/* soft reboot @ cpu exception */
-	if ((machine.cpu_regs.exception != EXC_SHUTDOWN) &&
-		(machine.cpu_regs.exception != EXC_NONE)) {
+	if ((machine.cpu_regs.exception != EXC_SHUTDOWN) && (machine.cpu_regs.exception != EXC_NONE)) {
 		args.load_program = NULL;
 		args.debug = 0;
 		goto machine_soft_reset;

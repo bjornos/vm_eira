@@ -90,7 +90,7 @@ void *program_loader(void *mach)
 	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
-		fd = open(PRG_lOAD_FIFO, O_RDONLY);
+		fd = open(PRG_LOAD_FIFO, O_RDONLY);
 		if (fd < 0) {
 			perror("unable to setup program loader");
 			pthread_exit(NULL);

@@ -42,11 +42,11 @@
 
 #define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
 
-enum {
+typedef enum {
 	BOOT_OK = 0,
 	BOOT_ERR_IO = 1,
 	BOOT_ERR_PRG = 2,
-};
+} machine_boot_err;
 
 struct _machine_reg {
 		uint8_t *prg_loading;
