@@ -51,6 +51,8 @@ typedef enum {
 struct _machine_reg {
 		uint8_t *prg_loading;
 		uint8_t *boot_code;
+		uint8_t *boot_msg;
+		uint8_t *boot_anim;
 };
 
 struct _machine {

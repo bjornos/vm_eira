@@ -43,4 +43,7 @@
 #define MEM_BOOT_STATUS		0x0101
 #define MEM_PRG_LOADING		0x0100
 
+#define MEM_ROM_BOOT_MSG	0x0020 /* 16 chars of boot text segment */
+#define MEM_ROM_BOOT_ANIM	0x0030 /* 16 chars */
+
 #endif /* __MEMORY_H_ */

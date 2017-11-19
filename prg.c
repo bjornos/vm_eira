@@ -72,7 +72,7 @@ void program_load_cleanup(void)
 {
 	int fd;
 
-	fd = open(PRG_lOAD_FIFO, O_WRONLY);
+	fd = open(PRG_LOAD_FIFO, O_WRONLY);
 	if (fd == -1)
 		return;
 	else
@@ -104,7 +104,7 @@ void *program_loader(void *mach)
 
 		program_load(machine, prg_name, MEM_START_PRG);
 	}
-	unlink(PRG_lOAD_FIFO);
+	unlink(PRG_LOAD_FIFO);
 
 	pthread_exit(NULL);
 }

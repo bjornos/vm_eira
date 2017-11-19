@@ -36,6 +36,13 @@ typedef struct {
 	int dump_size;
 } args_t;
 
+const uint8_t rom_txt_segment_boot_head[] =
+	{'e', 'i', 'r', 'a', '-', '1', 0x00, 0x00,
+	 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+const uint8_t rom_txt_segment_boot_anim[15] =
+	{'|','/','-','\\','|','/', '-', '\\', '*', 0x00, 0x00,0x00,0x00,0x00,0x00};
+
 struct _machine machine;
 
 static struct argp_option opts[] = {
@@ -118,6 +125,14 @@ static __inline__ void mem_setup(void)
 
 	machine.mach_regs.prg_loading = (uint8_t *)&machine.RAM[MEM_PRG_LOADING];
 	machine.mach_regs.boot_code = (uint8_t *)&machine.RAM[MEM_BOOT_STATUS];
+
+	machine.mach_regs.boot_msg = (uint8_t *)&machine.RAM[MEM_ROM_BOOT_MSG];
+	memcpy(machine.mach_regs.boot_msg, rom_txt_segment_boot_head,
+		sizeof(rom_txt_segment_boot_head));
+
+	machine.mach_regs.boot_anim = (uint8_t *)&machine.RAM[MEM_ROM_BOOT_ANIM];
+	memcpy(machine.mach_regs.boot_anim, rom_txt_segment_boot_anim,
+		sizeof(rom_txt_segment_boot_anim));
 
 	*machine.mach_regs.prg_loading = PRG_LOADING_DONE;
 	*machine.mach_regs.boot_code = BOOT_OK;

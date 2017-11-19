@@ -226,6 +226,22 @@
 */
 #define rst		0x15
 
+/**
+ * instruction: move mem
+ *
+ * syntax: movmr dest reg, ram[src reg value]
+ *
+ * copy a value from mem address contained in src register
+ * into dest register
+ *
+ *
+ * | 0110 1000 | 0000 | 0000 | 0000 0000 0000 0000 |
+ * 0           8  dest   src 16
+ *    instr       registers        reserved
+*/
+#define movmr	0x16
+
+
 
 /**
  * instruction: display wait
@@ -287,12 +303,13 @@
  *
  * set cursor/pixelpos at x,y
  *
- * | 0010 1100 | 0000 0000 0000 | 0000 0000 0000 |
- *   0          8    xpos      15      ypos
+ * | 0010 1100 | 0000  0000 | 0000 0000 | 0000 0000 |
+ *   0         8  reserved  16   xpos  24    ypos
  *
- *   x- and ypos are general purpose registers
- *   12-bit value may address up to 4096 pixels.
-*/
+ *   xpos and ypos are general purpose registers containing
+ *   x and y pixel position.
+ *
+ */
 #define disetxy	0x34
 
 /**
@@ -301,10 +318,14 @@
  * produces a charachter output in screen display at position
  * px py.
  *
- * | 1010 1100  | 0000  0000  |  0000 0000 0000 0000 |
- *   0          8 ASCII code  15
+ * | 1010 1100  | 00 | 00 0000  | 0000 0000 0000 0000 |
+ *   0          8 src  reserved 15 #val | @mem | reg
+ *                type                 ASCII Code
  *
- *   The result must be placed in general purpose registers
+ * If SRC is MEM and value is < MEM_START_RW the value of MEM [ GP REG #value ]
+ * will be used. If value in ths case is more than GP REG MAX an exception
+ * will occur.
+ *
  */
 #define dichar		0x35
 

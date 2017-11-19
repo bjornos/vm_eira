@@ -50,6 +50,7 @@ void test_result(uint16_t *GP_REG, uint8_t *RAM) {
 	assert(*(GP_REG + 7) == *(GP_REG + 8));
 	assert(*(uint16_t *)(RAM + MEM_IO_OUTPUT) == IO_OUT_TST_VAL);
 	assert(*(uint16_t *)(RAM + MEM_IO_INPUT) == IO_IN_TST_VAL);
+	assert(*(GP_REG + 9) == 0x40);  /* movmr */
 }
 
 const uint32_t program_regression_test[] = {
@@ -58,12 +59,12 @@ const uint32_t program_regression_test[] = {
 	(1 << 0),		/* reserved */
 	(112 << 0),		/* code size  */
 	(diclr << 0),
-	(disetxy << 0) | 10  << 8 | (1 << 20),
+	/*(disetxy << 0) | 10  << 8 | (1 << 20),
 	(dichar << 0) | ('T' << 8),
 	(disetxy << 0) | 11  << 8 | (1 << 20),
 	(dichar << 0) | ('S' << 8),
 	(disetxy << 0) | 12  << 8 | (1 << 20),
-	(dichar << 0) | ('T' << 8),
+	(dichar << 0) | ('T' << 8),*/
 	(nop << 0),
 
 	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xe4 << 16), 			/* r1 = 0xe4 */
@@ -103,6 +104,13 @@ const uint32_t program_regression_test[] = {
 	(sub << 0) | (R7 << 8)  | OP_DST_REG | (1 << 16),			/* r7 = r7 - 1 */
 	(cmp << 0) | (R7 << 8) | OP_DST_REG | OP_SRC_REG | (8 << 16),		/* r7 == r8? */
 	(brneq << 0) | (9 << 16),						/* not eq. jump to @test_cmp (0x1074 */
+
+	/* test movmr */
+	(mov << 0) | (R9 << 8)  | OP_DST_REG | (0x40 << 16),			/* r9 = 0x40 */
+	(mov << 0) | (R9 << 8) | OP_SRC_REG | OP_DST_MEM | (13000 << 16),	/* RAM[13000] = 0x40*/
+	(mov << 0) | (R9 << 8)  | OP_DST_REG | (13000 << 16),
+	(movmr << 0) | (R9 << 8)  |  (R9 << 12),			/* r9 = RAM[ r9 ] == 0x40 */
+
 
 	(halt << 0),
 };

@@ -132,6 +132,8 @@ static void cpu_decode_instruction(void *mach)
 	uint16_t src;
 	uint16_t *dst;
 	uint16_t addr;
+	uint16_t arg1;
+	uint16_t arg2;
 
 	if (machine->cpu_regs.exception)
 		return;
@@ -229,6 +231,18 @@ static void cpu_decode_instruction(void *mach)
 		case rst:
 			debug_opcode(dbg_info, dbg_index, "rst");
 			machine->cpu_regs.exception = EXC_PRG;
+			break;
+		case movmr:
+			arg1 = (*instr >> 8) & 0xf;
+			arg2 = machine->cpu_regs.GP_REG[(*instr >> 12) & 0xf];
+			debug_opcode(dbg_info, dbg_index, "movmr");
+			debug_args(dbg_info, dbg_index, &arg1, &arg2);
+			if ((arg1 > GP_REG_MAX))
+				machine->cpu_regs.exception = EXC_MEM;
+			else {
+				machine->cpu_regs.GP_REG[arg1] = machine->RAM[arg2];
+				debug_result(dbg_info, dbg_index, (long *)&machine->cpu_regs.GP_REG[arg1]);
+			}
 			break;
 		case diwait:
 			debug_opcode(dbg_info, dbg_index, "diwait");

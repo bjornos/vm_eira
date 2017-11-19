@@ -34,6 +34,16 @@ const uint32_t program_reset[] = {
 	(halt << 0),
 };
 
+/*
+ * ROM Register Usage
+ *
+ * R1: Holds marker for end of text -- fixme: should not be needed.
+ * R4: Pos X
+ * R5: Pos Y
+ * R6: Character index pointer
+ * R7: Program loading flag
+ * R10: Label
+*/
 const uint32_t rom[] = {
 	PRG_MAGIC_HEADER,	/* magic */
 	(1 << 0),		/* reserved */
@@ -46,41 +56,46 @@ const uint32_t rom[] = {
 
 	(dimd << 0) | (mode_40x12 << 8),
 	(diwtrt << 0),
+
 	(diclr << 0),
-	(disetxy << 0) | 10  << 8 | (1 << 20),
-	(dichar << 0) | ('e' << 8),
-	(disetxy << 0) | 11  << 8 | (1 << 20),
-	(dichar << 0) | ('i' << 8),
-	(disetxy << 0) | 12  << 8 | (1 << 20),
-	(dichar << 0) | ('r' << 8),
-	(disetxy << 0) | 13  << 8 | (1 << 20),
-	(dichar << 0) | ('a' << 8),
-	(disetxy << 0) | 14  << 8 | (1 << 20),
-	(dichar << 0) | ('-' << 8),
-	(disetxy << 0) | 15  << 8 | (1 << 20),
-	(dichar << 0) | ('1' << 8),
+
+	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0x00 << 16), 			/* r1 = value of "end" marker */
+	(mov << 0) | (R4 << 8)  | OP_DST_REG | (10 << 16), 			/* r4 = pos x */
+	(mov << 0) | (R5 << 8)  | OP_DST_REG | (1 << 16), 			/* r5 = pos y*/
+
+	(mov << 0) | (R6 << 8)  | OP_DST_REG | (MEM_ROM_BOOT_MSG << 16), 	/* r6 = @ mem boot msg */
 
 	/* store pc. effectively creating a label that can be used with jmp */
 	(stopc << 0) | (R10 << 8),
 
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('|' << 8),
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('/' << 8),
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('-' << 8),
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('\'' << 8),
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('|' << 8),
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('/' << 8),
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('-' << 8),
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('\\' << 8),
-	(disetxy << 0) | 12  << 8 | (2 << 20),
-	(dichar << 0) | ('*' << 8),
+	(disetxy << 0) | R4  << 16 | (R5 << 24),				/* print chars from R6*/
+	(dichar << 0) | OP_SRC_MEM | (R6 << 16),
+
+	(add << 0) | (R4 << 8)  | OP_DST_REG | (1 << 16),			/* r4++ - x pos ++ */
+	(add << 0) | (R6 << 8)  | OP_DST_REG | (1 << 16),			/* r6++ - next char */
+
+	/* check string is \0 */
+	(movmr << 0) | (R0 << 8)  | R6 << 12,  /* r0 = RAM[ r6 ]*/
+	(cmp << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_REG | (R1 << 16),
+	(brneq << 0) | (R10 << 16),						/* print next char if not at end */
+
+
+	(mov << 0) | (R4 << 8)  | OP_DST_REG | (12 << 16), 			/* r4 = pos x */
+	(mov << 0) | (R5 << 8)  | OP_DST_REG | (2 << 16), 			/* r5 = pos y*/
+
+	(mov << 0) | (R6 << 8)  | OP_DST_REG | (MEM_ROM_BOOT_ANIM << 16), 	/* r6 = @ mem boot anim */
+
+	(stopc << 0) | (R10 << 8),						/* store pc for new label */
+
+	(disetxy << 0) | R4  << 16 | (R5 << 24),
+	(dichar << 0) | OP_SRC_MEM | (R6 << 16),
+
+	(add << 0) | (R6 << 8)  | OP_DST_REG | (1 << 16),			/* r6++ - next char */
+
+	/* check string is \0 */
+	(movmr << 0) | (R0 << 8)  | R6 << 12,
+	(cmp << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_REG | (R1 << 16),
+	(brneq << 0) | (R10 << 16),
 
 	/* check if a program is being loaded */
 	(mov << 0) | (R7 << 8)  | OP_DST_REG | (PRG_LOADING << 16),

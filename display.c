@@ -97,14 +97,27 @@ int display_request(void *mach, int request)
 				display_set_mode(&machine->display, machine->display.frame_buffer, (*instr >> 8));
 		break;
 		case DISPLAY_SETXY:
-			machine->display.x = (*instr >> 8) & 0xfff;
-			machine->display.y = (*instr >> 20) & 0xfff;
+			machine->display.x = machine->cpu_regs.GP_REG[ (*instr >> 16) & 0xff ];
+			machine->display.y = machine->cpu_regs.GP_REG[ (*instr >> 24) & 0xff ];
 			break;
-		case DISPLAY_SETC:
+		case DISPLAY_SETC: {
+			char c;
+			if (*instr & OP_SRC_MEM) {
+				/* above */
+				if  ((*instr >> 16) > MEM_START_RW) {
+					c = machine->RAM[(*instr >> 16)];
+				} else {
+					c = machine->RAM[ machine->cpu_regs.GP_REG [ (*instr >> 16)] ]; /* fixme: clamp at reg max */
+				}
+			} else if (*instr & OP_SRC_REG) {
+				c = machine->cpu_regs.GP_REG[(*instr >> 16) & 0xff ];
+			} else
+				c = (*instr >> 16) & 0xff;
 			addr = (machine->display.y * adapter_mode[machine->display.mode].vertical) + machine->display.x;
-			machine->display.c = (*instr >> 8) & 0xff;
+			machine->display.c = c;
 			*(machine->display.frame_buffer + addr) = machine->display.c;
-			break;
+		}
+		break;
 		case DISPLAY_CLR:
 			memset(&machine->display.frame_buffer[0], ' ', adapter_mode[machine->display.mode].resolution);
 			break;
