@@ -36,12 +36,13 @@ typedef struct {
 	int dump_size;
 } args_t;
 
-const uint8_t rom_txt_segment_boot_head[] =
+static const uint8_t rom_txt_segment_boot_head[15] =
 	{'e', 'i', 'r', 'a', '-', '1', 0x00, 0x00,
 	 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-const uint8_t rom_txt_segment_boot_anim[15] =
-	{'|','/','-','\\','|','/', '-', '\\', '*', 0x00, 0x00,0x00,0x00,0x00,0x00};
+static const uint8_t rom_txt_segment_boot_anim[15] =
+	{'|','/','-','\\','|','/', '-', '\\',
+	 '*', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 struct _machine machine;
 
