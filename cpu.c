@@ -375,9 +375,8 @@ void *cpu_machine(void *mach)
 {
 	struct _machine *machine = mach;
 	struct timespec cpu_clk_freq;
-	int hz = 10; /* 10 Hz */
 
-	cpu_clk_freq.tv_nsec = 1000000000 / hz;
+	cpu_clk_freq.tv_nsec = 1000000000 / CPU_CLOCK_FREQ;
 	cpu_clk_freq.tv_sec = 0;
 
 	while(!machine->cpu_regs.panic) {

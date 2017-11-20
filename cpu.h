@@ -27,6 +27,8 @@
 #include "registers.h"
 #include "display.h"
 
+#define CPU_CLOCK_FREQ	50	/* in Hz */
+
 enum op_size {
 	SIZE_BYTE,
 	SIZE_INT,
