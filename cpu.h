@@ -46,23 +46,17 @@ enum conditions {
 
 struct _cpu_regs {
 	uint16_t GP_REG[GP_REG_MAX];	/* general purpose registers */
-	long pc;			/* program counter */
+	unsigned long pc;		/* program counter */
 	int sp;				/* stack pointer */
 	int cr;				/* conditional register */
 	char exception;
 	unsigned char gpu_request;
 	unsigned char reset;
-	unsigned char dbg;	/* enable debug mode */
+	unsigned char dbg;		/* enable debug mode */
 	unsigned char panic;		/* halt cpu */
 };
 
-//void cpu_decode_instruction(void *mach);
-
-//void cpu_handle_exception(struct _cpu_regs *cpu_regs, uint32_t *instr);
-
 void cpu_reset(void *mach);
-
-//long cpu_fetch_instruction(struct _cpu_regs *cpu_regs);
 
 void *cpu_machine(void *mach);
 

@@ -39,9 +39,9 @@ void debug_instr(struct _dbg *dbg, int index, uint32_t *instr)
 	dbg[index].instr = *instr;
 }
 
-void debug_result(struct _dbg *dbg, int index, long *res)
+void debug_result(struct _dbg *dbg, int index, unsigned long res)
 {
-	dbg[index].op_result = *res;
+	dbg[index].op_result = res;
 }
 
 void debug_args(struct _dbg *dbg, int index, uint16_t *arg1,uint16_t *arg2)
@@ -68,7 +68,7 @@ void dump_instr(struct _dbg *dbg, int dbg_index)
 		printf("%-16s", dbg[c].opcode);
 		printf("%d\t", dbg[c].op_arg1);
 		printf("%d\t", dbg[c].op_arg2);
-		printf("%ld\n", dbg[c].op_result);
+		printf("%ld\t\n", dbg[c].op_result);
 		c = (c -1) % DBG_HISTORY;
 	}
 	printf("\n");

@@ -32,14 +32,14 @@ struct _dbg {
 	char opcode[OPCODE_NAME_MAX];
 	uint16_t op_arg1;
 	uint16_t op_arg2;
-	long op_result;
+	unsigned long op_result;
 };
 
 void debug_opcode(struct _dbg *dbg, int index, const char op[]);
 
 void debug_instr(struct _dbg *dbg, int index, uint32_t *instr);
 
-void debug_result(struct _dbg *dbg, int index, long *res);
+void debug_result(struct _dbg *dbg, int index, unsigned long res);
 
 void debug_args(struct _dbg *dbg, int index, uint16_t *arg1,uint16_t *arg2);
 

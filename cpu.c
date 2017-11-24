@@ -44,7 +44,7 @@ __inline__ static  void compare(struct _cpu_regs *cpu_regs, uint16_t c1, uint16_
 		(comp < 0) ? (COND_LE | COND_NEQ) :
 		COND_UNDEF;
 
-	debug_result(dbg_info, dbg_index, (long*)&cpu_regs->cr);
+	debug_result(dbg_info, dbg_index, (unsigned long)cpu_regs->cr);
 }
 
 __inline__ static void branch(struct _cpu_regs *cpu_regs, enum conditions cond, uint16_t addr)
@@ -55,7 +55,7 @@ __inline__ static void branch(struct _cpu_regs *cpu_regs, enum conditions cond, 
 	if (cpu_regs->cr & cond) {
 		cpu_regs->pc = addr - sizeof(uint32_t);
 	}
-	debug_result(dbg_info, dbg_index, &cpu_regs->pc);
+	debug_result(dbg_info, dbg_index, cpu_regs->pc);
 	cpu_regs->cr = COND_UNDEF;
 }
 
@@ -187,7 +187,7 @@ static void cpu_decode_instruction(void *mach)
 					machine->cpu_regs.pc = machine->cpu_regs.GP_REG[(*instr >> 8)] - sizeof(uint32_t);
 			}
 
-			debug_result(dbg_info, dbg_index, &machine->cpu_regs.pc);
+			debug_result(dbg_info, dbg_index, machine->cpu_regs.pc);
 			break;
 		case cmp:
 			debug_opcode(dbg_info, dbg_index, "cmp");
@@ -195,7 +195,7 @@ static void cpu_decode_instruction(void *mach)
 			src = cpu_decode_mnemonic(&machine->cpu_regs, machine->RAM, instr, &dst, SIZE_INT);
 			compare(&machine->cpu_regs, src, *dst);
 			debug_args(dbg_info, dbg_index, &src, dst);
-			debug_result(dbg_info, dbg_index, (long *)&machine->cpu_regs.cr);
+			debug_result(dbg_info, dbg_index, (unsigned long)machine->cpu_regs.cr);
 			break;
 		case breq:
 			debug_opcode(dbg_info, dbg_index, "breq");
@@ -225,7 +225,7 @@ static void cpu_decode_instruction(void *mach)
 			debug_opcode(dbg_info, dbg_index, "stopc");
 			addr = (*instr >> 8);
 			debug_args(dbg_info, dbg_index, &addr, NULL);
-			debug_result(dbg_info, dbg_index, &machine->cpu_regs.pc);
+			debug_result(dbg_info, dbg_index, machine->cpu_regs.pc);
 			machine->cpu_regs.GP_REG[(*instr >> 8)] = machine->cpu_regs.pc;
 			break;
 		case rst:
@@ -241,7 +241,7 @@ static void cpu_decode_instruction(void *mach)
 				machine->cpu_regs.exception = EXC_MEM;
 			else {
 				machine->cpu_regs.GP_REG[arg1] = machine->RAM[arg2];
-				debug_result(dbg_info, dbg_index, (long *)&machine->cpu_regs.GP_REG[arg1]);
+				debug_result(dbg_info, dbg_index,  machine->cpu_regs.GP_REG[arg1]);
 			}
 			break;
 		case diwait:
@@ -278,13 +278,13 @@ static void cpu_decode_instruction(void *mach)
 	}
 
 	if (machine->cpu_regs.dbg) { // consider move this into debug_opcode so that it will show in case of hang
-		//display_wait_retrace(display);
-		//display->enabled = 0;
+		display_request(machine, DISPLAY_WAIT_RETRACE);
+		machine->display.enabled = 0;
 		gotoxy(1,15);
 		dump_instr(dbg_info, dbg_index);
 		gotoxy(1,15 + DBG_HISTORY + 4);
 		dump_regs(machine->cpu_regs.GP_REG);
-		//display->enabled = 1; /* fixme: bug*/
+		machine->display.enabled = 1; /* fixme: bug*/
 	}
 
 }
