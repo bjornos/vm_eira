@@ -54,7 +54,7 @@ static struct argp_option opts[] = {
 		"Dump RAM at machine shutdown"},
 	{"dump-size", 's', "RAM DUMP SIZE", OPTION_ARG_OPTIONAL,
 		"Number of RAM Bytes to dump (default 32)"},
-	{0}
+	{ 0 },
 };
 
 
@@ -90,10 +90,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 			args->load_program = arg;
 			break;
 		case 'r':
-			args->dump_ram = atoi(arg);
+			if (arg)
+				args->dump_ram = atoi(arg);
+			else
+				argp_usage(state);
 			break;
 		case 's':
-			args->dump_size = atoi(arg);
+			if (arg)
+				args->dump_ram = atoi(arg);
+			else
+				argp_usage(state);
 			break;
 		default:
 			return ARGP_ERR_UNKNOWN;
