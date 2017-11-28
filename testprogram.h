@@ -34,8 +34,20 @@
 #define IO_OUT_TST_VAL	15901
 #define IO_IN_TST_VAL	16348
 
+/*
+  reserved registers:
+  R0
+  R1
+  R3
+  R6
+  R10
+  R11
+  R7
+  R9
+*/
 
 void test_result(uint16_t *GP_REG, uint8_t *RAM) {
+	assert(*(GP_REG + 2) == 42);
 	assert(*(GP_REG + 1) == 0xe4);
 	assert(*(GP_REG + 6) == *(GP_REG + 1));
 	assert(*(RAM + 8192) == 0xaa);
@@ -104,9 +116,20 @@ const uint32_t program_regression_test[] = {
 	(movi << 0) | (R15 << 8)  | OP_DST_MEM | (8200 << 16),			/* RAM[8200] = 1024 */
 
 	/* test cmp and branch instructions. */
+	(mov << 0) | (R15 << 8)  | OP_DST_REG | (8 << 16),			/* r15 != 0 */
+	(mov << 0) | (R2 << 8)  | OP_DST_REG | (41 << 16),			/* r2 = 41 */
+	(mov << 0) | (R7 << 8)  | OP_DST_REG | (15 << 16),			/* r7 = 0  */
+	(stopc << 0) | (R9 << 8),
+	(add << 0) | (R9 << 8)  | OP_DST_REG | ((sizeof(uint32_t) * 5) << 16),	/* label @ 5 instructions down the road */
+	(cmp << 0) | (R7 << 8) | OP_DST_REG | (15 << 16),			/* cmp with immidate value  */
+	(breq << 0) | (R9 << 16),						/* eq. jump to @passed_immidiate_cmp in R9 */
+	(halt << 0),
+/* label @passed_immidiate_cmp: */
+	(mov << 0) | (R2 << 8)  | OP_DST_REG | (42 << 16),			/* r2 = 42 */
+
 	(mov << 0) | (R7 << 8)  | OP_DST_REG | (4 << 16),			/* r7=4  */
 	(mov << 0) | (R8 << 8)  | OP_DST_REG | (1 << 16),			/* r8=1  */
-//label @test_cmp:  [addr 0x1074
+/* label @test_cmp:  [addr 0x1074 */
 	(stopc << 0) | (R9 << 8),
 
 	(sub << 0) | (R7 << 8)  | OP_DST_REG | (1 << 16),			/* r7 = r7 - 1 */
