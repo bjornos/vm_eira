@@ -60,8 +60,8 @@ const uint32_t rom[] = {
 	(diclr << 0),
 
 	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0x00 << 16), 			/* r1 = value of "end" marker */
-	(mov << 0) | (R4 << 8)  | OP_DST_REG | (10 << 16), 			/* r4 = pos x */
-	(mov << 0) | (R5 << 8)  | OP_DST_REG | (1 << 16), 			/* r5 = pos y*/
+	(mov << 0) | (R4 << 8)  | OP_DST_REG | (0x0A << 16), 			/* r4 = pos x = 10*/
+	(mov << 0) | (R5 << 8)  | OP_DST_REG | (0x01 << 16), 			/* r5 = pos y = 1*/
 
 	(mov << 0) | (R6 << 8)  | OP_DST_REG | (MEM_ROM_BOOT_MSG << 16), 	/* r6 = @ mem boot msg */
 
@@ -71,17 +71,16 @@ const uint32_t rom[] = {
 	(disetxy << 0) | R4  << 16 | (R5 << 24),				/* print chars from R6*/
 	(dichar << 0) | OP_SRC_MEM | (R6 << 16),
 
-	(add << 0) | (R4 << 8)  | OP_DST_REG | (1 << 16),			/* r4++ - x pos ++ */
-	(add << 0) | (R6 << 8)  | OP_DST_REG | (1 << 16),			/* r6++ - next char */
+	(add << 0) | (R4 << 8)  | OP_DST_REG | (0x01 << 16),			/* r4++ - x pos ++ */
+	(add << 0) | (R6 << 8)  | OP_DST_REG | (0x01 << 16),			/* r6++ - next char */
 
 	/* check string is \0 */
 	(movmr << 0) | (R0 << 8)  | R6 << 12,  /* r0 = RAM[ r6 ]*/
 	(cmp << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_REG | (R1 << 16),
 	(brneq << 0) | (R10 << 16),						/* print next char if not at end */
 
-
-	(mov << 0) | (R4 << 8)  | OP_DST_REG | (12 << 16), 			/* r4 = pos x */
-	(mov << 0) | (R5 << 8)  | OP_DST_REG | (2 << 16), 			/* r5 = pos y*/
+	(mov << 0) | (R4 << 8)  | OP_DST_REG | (0x0C << 16), 			/* r4 = pos x = 12 */
+	(mov << 0) | (R5 << 8)  | OP_DST_REG | (0x02 << 16), 			/* r5 = pos y = 2 */
 
 	(mov << 0) | (R6 << 8)  | OP_DST_REG | (MEM_ROM_BOOT_ANIM << 16), 	/* r6 = @ mem boot anim */
 
@@ -90,7 +89,7 @@ const uint32_t rom[] = {
 	(disetxy << 0) | R4  << 16 | (R5 << 24),
 	(dichar << 0) | OP_SRC_MEM | (R6 << 16),
 
-	(add << 0) | (R6 << 8)  | OP_DST_REG | (1 << 16),			/* r6++ - next char */
+	(add << 0) | (R6 << 8)  | OP_DST_REG | (0x01 << 16),			/* r6++ - next char */
 
 	/* check string is \0 */
 	(movmr << 0) | (R0 << 8)  | R6 << 12,
@@ -107,7 +106,9 @@ const uint32_t rom[] = {
 	(brneq << 0) | (MEM_START_PRG << 16),
 
 	/* mark that a program currently is being loaded */
-	(disetxy << 0) | 15  << 8 | (2 << 20),
+	(mov << 0) | (R4 << 8)  | OP_DST_REG | (0x0F << 16), 	/* xpos = 15 */
+	(mov << 0) | (R5 << 8)  | OP_DST_REG | (0x02 << 16), 	/* ypos = 2 */
+	(disetxy << 0) | R4  << 16 | (R5 << 24),
 	(dichar << 0) | ('$' << 8),
 
 	/* keep spinning the wheel */

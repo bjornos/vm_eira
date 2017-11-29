@@ -72,75 +72,75 @@ const uint32_t program_regression_test[] = {
 	(112 << 0),		/* code size  */
 	(diclr << 0),
 
-	(mov << 0) | (R1 << 8)  | OP_DST_REG | (10 << 16), 			/* posx = 10 */
-	(mov << 0) | (R2 << 8)  | OP_DST_REG | (1 << 16), 			/* posy = 1 */
+	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0x0A << 16), 			/* posx = 10 */
+	(mov << 0) | (R2 << 8)  | OP_DST_REG | (0x01 << 16), 			/* posy = 1 */
 
 	(disetxy << 0) | R1  << 16 | (R2 << 24),
 	(dichar << 0) | ('T' << 16),
 
-	(add << 0) | (R1 << 8)  | OP_DST_REG | (1 << 16),
+	(add << 0) | (R1 << 8)  | OP_DST_REG | (0x01 << 16),
 	(disetxy << 0) | R1  << 16 | (R2 << 24),
 	(dichar << 0) | ('S' << 16),
 
-	(add << 0) | (R1 << 8)  | OP_DST_REG | (1 << 16),
+	(add << 0) | (R1 << 8)  | OP_DST_REG | (0x01 << 16),
 	(disetxy << 0) | R1  << 16 | (R2 << 24),
 	(dichar << 0) | ('T' << 16),
 	(nop << 0),
 
-	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xe4 << 16), 			/* r1 = 0xe4 */
+	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0xE4 << 16), 			/* r1 = 0xe4 */
 	(mov << 0) | (R6 << 8) | OP_SRC_REG | OP_DST_REG | (R1 << 16),		/* r10 = r1 */
-	(mov << 0) | (R0 << 8)  | OP_DST_REG | (0xaa << 16),
-	(mov << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_MEM | (8192 << 16), 	/* RAM[8192] = 0xaa */
+	(mov << 0) | (R0 << 8)  | OP_DST_REG | (0xAA << 16),
+	(mov << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_MEM | (0x2000 << 16), 	/* RAM[8192] = 0xaa */
 
 	(mov << 0) | (R0 << 8)  | OP_DST_REG | (0x44 << 16),			/* r0 = 0x44 */
-	(mov << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_MEM | (8194 << 16),	/* RAM[8194] = 0x44*/
-	(mov << 0) | (R3 << 8) | OP_SRC_MEM | OP_DST_REG | (8194 << 16),	/* r3 = 0x44 */
+	(mov << 0) | (R0 << 8) | OP_SRC_REG | OP_DST_MEM | (0x2002 << 16),	/* RAM[8194] = 0x44*/
+	(mov << 0) | (R3 << 8) | OP_SRC_MEM | OP_DST_REG | (0x2002 << 16),	/* r3 = 0x44 */
 
 
 	(mov << 0) | (R10 << 8)  | OP_DST_REG | (0x00 << 16), 			/* r10 = 0x00*/
 	(mov << 0) | (R11 << 8)  | OP_DST_REG | (0x00 << 16), 			/* r11 = 0x00*/
 	(mov << 0) | (R12 << 8)  | OP_DST_REG | (0x02 << 16), 			/* r12 = 0x02*/
 
-	(add << 0) | (R10 << 8)  | OP_DST_REG | (198 << 16),			/* r10 = r10 + 198 (0 + 198)*/
-	(add << 0) | (R11 << 8)  | OP_DST_REG | OP_SRC_REG | (10 << 16),	/* r11 = r11 + r10 (0 + 198)*/
-	(add << 0) | (R11 << 8)  | OP_DST_REG | OP_SRC_REG | (12 << 16),	/* r11 = r11 + r12 (198 + 2) */
+	(add << 0) | (R10 << 8)  | OP_DST_REG | (0xC6 << 16),			/* r10 = r10 + 198 (0 + 198)*/
+	(add << 0) | (R11 << 8)  | OP_DST_REG | OP_SRC_REG | (0x0A << 16),	/* r11 = r11 + r10 (0 + 198)*/
+	(add << 0) | (R11 << 8)  | OP_DST_REG | OP_SRC_REG | (0x0C << 16),	/* r11 = r11 + r12 (198 + 2) */
 
 	(mov << 0) | (R13 << 8)  | OP_DST_REG | (0x10 << 16),
-	(mov << 0) | (R13 << 8) | OP_SRC_REG | OP_DST_MEM | (8196 << 16), 	/* RAM[8196] = 0x10 */
+	(mov << 0) | (R13 << 8) | OP_SRC_REG | OP_DST_MEM | (0x2004 << 16), 	/* RAM[8196] = 0x10 */
 
-	(add << 0) | (R12 << 8)  | OP_DST_MEM | OP_SRC_REG | (8196 << 16),	/* RAM[8196] = RAM[8196] + r12 (16 + 2)*/
+	(add << 0) | (R12 << 8)  | OP_DST_MEM | OP_SRC_REG | (0x2004 << 16),	/* RAM[8196] = RAM[8196] + r12 (16 + 2)*/
 
-	(sub << 0) | (10 << 8)  | OP_DST_REG | OP_SRC_REG | (12 << 16),		/* r10 = r10 - r12 (198 - 2) */
+	(sub << 0) | (R10 << 8)  | OP_DST_REG | OP_SRC_REG | (0x0C << 16),	/* r10 = r10 - r12 (198 - 2) */
 
-	(mov << 0) | (R15 << 8)  | OP_DST_REG | (1807 << 16),			/* r15 = 1807 */
-	(movi << 0) | (R15 << 8)  | OP_DST_MEM | (8200 << 16),			/* RAM[8200] = 1024 */
+	(mov << 0) | (R15 << 8)  | OP_DST_REG | (0x70F << 16),			/* r15 = 1807 */
+	(movi << 0) | (R15 << 8)  | OP_DST_MEM | (0x2008 << 16),		/* RAM[8200] = 1024 */
 
 	/* test cmp and branch instructions. */
-	(mov << 0) | (R15 << 8)  | OP_DST_REG | (8 << 16),			/* r15 != 0 */
-	(mov << 0) | (R2 << 8)  | OP_DST_REG | (41 << 16),			/* r2 = 41 */
-	(mov << 0) | (R7 << 8)  | OP_DST_REG | (15 << 16),			/* r7 = 0  */
+	(mov << 0) | (R15 << 8)  | OP_DST_REG | (0x08 << 16),			/* r15 != 0 */
+	(mov << 0) | (R2 << 8)  | OP_DST_REG | (0x29 << 16),			/* r2 = 41 */
+	(mov << 0) | (R7 << 8)  | OP_DST_REG | (0x0F << 16),			/* r7 = 0  */
 	(stopc << 0) | (R9 << 8),
 	(add << 0) | (R9 << 8)  | OP_DST_REG | ((sizeof(uint32_t) * 5) << 16),	/* label @ 5 instructions down the road */
-	(cmp << 0) | (R7 << 8) | OP_DST_REG | (15 << 16),			/* cmp with immidate value  */
+	(cmp << 0) | (R7 << 8) | OP_DST_REG | (0x0F << 16),			/* cmp with immidate value  */
 	(breq << 0) | (R9 << 16),						/* eq. jump to @passed_immidiate_cmp in R9 */
 	(halt << 0),
 /* label @passed_immidiate_cmp: */
-	(mov << 0) | (R2 << 8)  | OP_DST_REG | (42 << 16),			/* r2 = 42 */
+	(mov << 0) | (R2 << 8)  | OP_DST_REG | (0x2A << 16),			/* r2 = 42 */
 
-	(mov << 0) | (R7 << 8)  | OP_DST_REG | (4 << 16),			/* r7=4  */
-	(mov << 0) | (R8 << 8)  | OP_DST_REG | (1 << 16),			/* r8=1  */
+	(mov << 0) | (R7 << 8)  | OP_DST_REG | (0x04 << 16),			/* r7=4  */
+	(mov << 0) | (R8 << 8)  | OP_DST_REG | (0x01 << 16),			/* r8=1  */
 /* label @test_cmp:  [addr 0x1074 */
 	(stopc << 0) | (R9 << 8),
 
-	(sub << 0) | (R7 << 8)  | OP_DST_REG | (1 << 16),			/* r7 = r7 - 1 */
-	(cmp << 0) | (R7 << 8) | OP_DST_REG | OP_SRC_REG | (8 << 16),		/* r7 == r8? */
-	(brneq << 0) | (9 << 16),						/* not eq. jump to @test_cmp (0x1074 */
+	(sub << 0) | (R7 << 8)  | OP_DST_REG | (0x01 << 16),			/* r7 = r7 - 1 */
+	(cmp << 0) | (R7 << 8) | OP_DST_REG | OP_SRC_REG | (R8 << 16),		/* r7 == r8? */
+	(brneq << 0) | (R9 << 16),						/* not eq. jump to @test_cmp (0x1074 */
 
 	/* test movmr */
 	(mov << 0) | (R9 << 8)  | OP_DST_REG | (0x40 << 16),			/* r9 = 0x40 */
-	(mov << 0) | (R9 << 8) | OP_SRC_REG | OP_DST_MEM | (13000 << 16),	/* RAM[13000] = 0x40*/
-	(mov << 0) | (R9 << 8)  | OP_DST_REG | (13000 << 16),
-	(movmr << 0) | (R9 << 8)  |  (R9 << 12),			/* r9 = RAM[ r9 ] == 0x40 */
+	(mov << 0) | (R9 << 8) | OP_SRC_REG | OP_DST_MEM | (0x514 << 16),	/* RAM[13000] = 0x40*/
+	(mov << 0) | (R9 << 8)  | OP_DST_REG | (0x514 << 16),
+	(movmr << 0) | (R9 << 8)  |  (R9 << 12),				/* r9 = RAM[ r9 ] == 0x40 */
 
 
 	(halt << 0),
