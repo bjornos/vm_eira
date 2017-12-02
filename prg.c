@@ -102,7 +102,8 @@ void *program_loader(void *mach)
 		/* remove traling newline */
 		strtok(prg_name, "\n"); /* note: not really thread safe */
 
-		program_load(machine, prg_name, MEM_START_PRG);
+		if (!machine->cpu_regs.panic)
+			program_load(machine, prg_name, MEM_START_PRG);
 	}
 	unlink(PRG_LOAD_FIFO);
 

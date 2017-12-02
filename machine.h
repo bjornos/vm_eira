@@ -45,8 +45,8 @@
 typedef enum {
 	BOOT_OK = 0,
 	BOOT_ERR_IO = 1,
-	BOOT_ERR_PRG = 2,
-} machine_boot_err;
+	BOOT_ERR_PRG = 4,
+} machine_boot_codes;
 
 struct _machine_reg {
 		uint8_t *prg_loading;

@@ -108,22 +108,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	return 0;
 }
 
-static __inline__ int machine_error_is_set(machine_boot_err err_code)
-{
-	if (*machine.mach_regs.boot_code & err_code)
-		return 1;
-
-	return 0;
-}
-static __inline__ void machine_error_set(machine_boot_err err_code)
-{
-	*machine.mach_regs.boot_code |= err_code;
-}
-static __inline__ int machine_error_is_clear(machine_boot_err err_code)
-{
-	return !machine_error_is_set(err_code);
-}
-
 static __inline__ void mem_setup(void)
 {
 	memset(&machine.RAM, 0x00, RAM_SIZE);
@@ -145,24 +129,29 @@ static __inline__ void mem_setup(void)
 	*machine.mach_regs.boot_code = BOOT_OK;
 }
 
-
 static void machine_reset(void) {
+	/* these should already have been removed, but let's be sure */
+	unlink(PRG_LOAD_FIFO);
+	unlink(IO_INPUT_PORT);
+	unlink(IO_OUTPUT_PORT);
+
 	mem_setup();
 
 	cpu_reset(&machine);
 
 	display_reset(&machine);
 
-	if (!ioport_reset(&machine))
-		machine_error_set(BOOT_ERR_IO);
+	if (!ioport_reset(&machine)) {
+		perror("failed to setup I/O ports");
+		*machine.mach_regs.boot_code |= BOOT_ERR_IO;
+	}
 
 	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 
 	if (mkfifo(PRG_LOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
 		perror("failed to create program loader");
-		machine_error_set(BOOT_ERR_PRG);
+		*machine.mach_regs.boot_code |= BOOT_ERR_PRG;
 	}
-
 }
 
 
@@ -188,14 +177,9 @@ machine_soft_reset:
 
 	pthread_create(&cpu, NULL, cpu_machine, &machine);
 	pthread_create(&display, NULL, display_machine, &machine);
-
-	if (machine_error_is_clear(BOOT_ERR_PRG))
-		pthread_create(&prg, NULL, program_loader, &machine);
-
-	if (machine_error_is_clear(BOOT_ERR_IO)) {
-		pthread_create(&io_in, NULL, ioport_machine_input, &machine);
-		pthread_create(&io_out, NULL, ioport_machine_output, &machine);
-	}
+	pthread_create(&prg, NULL, program_loader, &machine);
+	pthread_create(&io_in, NULL, ioport_machine_input, &machine);
+	pthread_create(&io_out, NULL, ioport_machine_output, &machine);
 
 	program_load_direct(&machine, rom, MEM_START_ROM, sizeof(rom));
 
@@ -217,17 +201,13 @@ machine_soft_reset:
 	pthread_join(cpu, &status);
 	pthread_join(display, &status);
 
-	if (machine_error_is_clear(BOOT_ERR_IO)) {
-		machine.ioport->active = 0;
-		ioport_shutdown((int)machine.ioport->input);
-		pthread_join(io_in, &status);
-		pthread_join(io_out, &status);
-	}
+	machine.ioport->active = 0;
+	ioport_shutdown((int)machine.ioport->input);
+	pthread_join(io_in, &status);
+	pthread_join(io_out, &status);
 
-	if (machine_error_is_clear(BOOT_ERR_PRG)) {
-		program_load_cleanup();
-		pthread_join(prg, &status);
-	}
+	program_load_cleanup();
+	pthread_join(prg, &status);
 
 	/* soft reboot @ cpu exception */
 	if ((machine.cpu_regs.exception != EXC_SHUTDOWN) && (machine.cpu_regs.exception != EXC_NONE)) {
