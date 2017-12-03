@@ -235,6 +235,7 @@ machine_soft_reset:
 	}
 
 	free(machine);
+	free(status);
 
 	pthread_exit(NULL);
 
