@@ -36,6 +36,8 @@ typedef struct {
 	int dump_size;
 } args_t;
 
+struct _machine *machine;
+
 static const uint8_t rom_txt_segment_boot_head[15] =
 	{'e', 'i', 'r', 'a', '-', '1', 0x00, 0x00,
 	 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -43,8 +45,6 @@ static const uint8_t rom_txt_segment_boot_head[15] =
 static const uint8_t rom_txt_segment_boot_anim[15] =
 	{'|','/','-','\\','|','/', '-', '\\',
 	 '*', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-struct _machine machine;
 
 static struct argp_option opts[] = {
 	{"debug", 'd', 0, OPTION_ARG_OPTIONAL, "Enable debug"},
@@ -65,11 +65,11 @@ static args_t args;
 void sig_handler(int signo)
 {
 	if (signo == SIGINT) {
-		machine.cpu_regs.exception = EXC_SHUTDOWN;
+		machine->cpu_regs.exception = EXC_SHUTDOWN;
 		args.debug = 1;
 	}
 	if (signo == SIGPIPE) {
-		machine.cpu_regs.exception = EXC_IOPORT;
+		machine->cpu_regs.exception = EXC_IOPORT;
 		args.debug = 1;
 	}
 }
@@ -110,23 +110,23 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static __inline__ void mem_setup(void)
 {
-	memset(&machine.RAM, 0x00, RAM_SIZE);
+	memset(machine->RAM, 0x00, RAM_SIZE);
 
-	machine.display.frame_buffer = machine.RAM + MEM_START_GPU_FB;
+	machine->display.frame_buffer = machine->RAM + MEM_START_GPU_FB;
 
-	machine.mach_regs.prg_loading = (uint8_t *)&machine.RAM[MEM_PRG_LOADING];
-	machine.mach_regs.boot_code = (uint8_t *)&machine.RAM[MEM_BOOT_STATUS];
+	machine->mach_regs.prg_loading = (uint8_t *)&machine->RAM[MEM_PRG_LOADING];
+	machine->mach_regs.boot_code = (uint8_t *)&machine->RAM[MEM_BOOT_STATUS];
 
-	machine.mach_regs.boot_msg = (uint8_t *)&machine.RAM[MEM_ROM_BOOT_MSG];
-	memcpy(machine.mach_regs.boot_msg, rom_txt_segment_boot_head,
+	machine->mach_regs.boot_msg = (uint8_t *)&machine->RAM[MEM_ROM_BOOT_MSG];
+	memcpy(machine->mach_regs.boot_msg, rom_txt_segment_boot_head,
 		sizeof(rom_txt_segment_boot_head));
 
-	machine.mach_regs.boot_anim = (uint8_t *)&machine.RAM[MEM_ROM_BOOT_ANIM];
-	memcpy(machine.mach_regs.boot_anim, rom_txt_segment_boot_anim,
+	machine->mach_regs.boot_anim = (uint8_t *)&machine->RAM[MEM_ROM_BOOT_ANIM];
+	memcpy(machine->mach_regs.boot_anim, rom_txt_segment_boot_anim,
 		sizeof(rom_txt_segment_boot_anim));
 
-	*machine.mach_regs.prg_loading = PRG_LOADING_DONE;
-	*machine.mach_regs.boot_code = BOOT_OK;
+	*machine->mach_regs.prg_loading = PRG_LOADING_DONE;
+	*machine->mach_regs.boot_code = BOOT_OK;
 }
 
 static void machine_reset(void) {
@@ -137,20 +137,20 @@ static void machine_reset(void) {
 
 	mem_setup();
 
-	cpu_reset(&machine);
+	cpu_reset(machine);
 
-	display_reset(&machine);
+	display_reset(machine);
 
-	if (!ioport_reset(&machine)) {
+	if (!ioport_reset(machine)) {
 		perror("failed to setup I/O ports");
-		*machine.mach_regs.boot_code |= BOOT_ERR_IO;
+		*machine->mach_regs.boot_code |= BOOT_ERR_IO;
 	}
 
-	memcpy(&machine.RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
+	memcpy(&machine->RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 
 	if (mkfifo(PRG_LOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
 		perror("failed to create program loader");
-		*machine.mach_regs.boot_code |= BOOT_ERR_PRG;
+		*machine->mach_regs.boot_code |= BOOT_ERR_PRG;
 	}
 }
 
@@ -171,66 +171,73 @@ int main(int argc,char *argv[])
 
 	argp_parse(&argp,argc,argv,0,0,&args);
 
+	machine = malloc(sizeof(struct _machine));
+	if (!machine)
+		return -ENOMEM;
+
 machine_soft_reset:
 
 	machine_reset();
 
-	pthread_create(&cpu, NULL, cpu_machine, &machine);
-	pthread_create(&display, NULL, display_machine, &machine);
-	pthread_create(&prg, NULL, program_loader, &machine);
-	pthread_create(&io_in, NULL, ioport_machine_input, &machine);
-	pthread_create(&io_out, NULL, ioport_machine_output, &machine);
+	pthread_create(&cpu, NULL, cpu_machine, machine);
+	pthread_create(&display, NULL, display_machine, machine);
+	pthread_create(&prg, NULL, program_loader, machine);
+	pthread_create(&io_in, NULL, ioport_machine_input, machine);
+	pthread_create(&io_out, NULL, ioport_machine_output, machine);
 
-	program_load_direct(&machine, rom, MEM_START_ROM, sizeof(rom));
+	program_load_direct(machine, rom, MEM_START_ROM, sizeof(rom));
 
 
 	if (args.load_program) {
-		program_load(&machine, args.load_program, MEM_START_PRG);
+		program_load(machine, args.load_program, MEM_START_PRG);
 	}
 	/* checktest override load program */
 	if (args.machine_check) {
-		program_load_direct(&machine, program_regression_test,
+		program_load_direct(machine, program_regression_test,
 			MEM_START_PRG, sizeof(program_regression_test));
 	}
 
-	machine.cpu_regs.dbg = args.debug ? 1 : 0;
+	machine->cpu_regs.dbg = args.debug ? 1 : 0;
 
 	/* release CPU */
-	machine.cpu_regs.reset = 0;
+	machine->cpu_regs.reset = 0;
+	machine->ioport->active = 0;
 
 	pthread_join(cpu, &status);
-	pthread_join(display, &status);
 
-	machine.ioport->active = 0;
-	ioport_shutdown((int)machine.ioport->input);
+	ioport_shutdown((int)machine->ioport->input);
+	program_load_cleanup();
+
+	pthread_join(display, &status);
 	pthread_join(io_in, &status);
 	pthread_join(io_out, &status);
-
-	program_load_cleanup();
 	pthread_join(prg, &status);
 
 	/* soft reboot @ cpu exception */
-	if ((machine.cpu_regs.exception != EXC_SHUTDOWN) && (machine.cpu_regs.exception != EXC_NONE)) {
+	if ((machine->cpu_regs.exception != EXC_SHUTDOWN) && (machine->cpu_regs.exception != EXC_NONE)) {
 		args.load_program = NULL;
 		args.debug = 0;
 		goto machine_soft_reset;
 	}
 
 	if (args.machine_check) {
-		machine.ioport->input = IO_IN_TST_VAL;
-		machine.ioport->output = IO_OUT_TST_VAL;
+		machine->ioport->input = IO_IN_TST_VAL;
+		machine->ioport->output = IO_OUT_TST_VAL;
 
-		test_result(machine.cpu_regs.GP_REG, machine.RAM);
+		test_result(machine->cpu_regs.GP_REG, machine->RAM);
 
 		printf("\n%s: all tests OK.\n",__func__);
 	}
 
 	if (args.dump_ram) {
-		dump_ram(machine.RAM, args.dump_ram, args.dump_ram + args.dump_size);
-		dump_io(machine.ioport->input, machine.ioport->output);
+		dump_ram(machine->RAM, args.dump_ram, args.dump_ram + args.dump_size);
+		dump_io(machine->ioport->input, machine->ioport->output);
 	}
 
+	free(machine);
+
 	pthread_exit(NULL);
+
 
 	return 0;
 }
