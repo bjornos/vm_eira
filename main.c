@@ -57,7 +57,6 @@ static struct argp_option opts[] = {
 	{ 0 },
 };
 
-
 static char* doc = "";
 static char* args_doc = "";
 static args_t args;
@@ -73,7 +72,6 @@ void sig_handler(int signo)
 		args.debug = 1;
 	}
 }
-
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -125,8 +123,8 @@ static __inline__ void mem_setup(void)
 	memcpy(machine->mach_regs.boot_anim, rom_txt_segment_boot_anim,
 		sizeof(rom_txt_segment_boot_anim));
 
-	*machine->mach_regs.prg_loading = PRG_LOADING_DONE;
-	*machine->mach_regs.boot_code = BOOT_OK;
+	*(machine->mach_regs.prg_loading) = PRG_LOADING_DONE;
+	*(machine->mach_regs.boot_code) = BOOT_OK;
 }
 
 static void machine_reset(void) {
@@ -143,18 +141,16 @@ static void machine_reset(void) {
 
 	if (!ioport_reset(machine)) {
 		perror("failed to setup I/O ports");
-		*machine->mach_regs.boot_code |= BOOT_ERR_IO;
+		*(machine->mach_regs.boot_code) |= BOOT_ERR_IO;
 	}
 
 	memcpy(&machine->RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
 
 	if (mkfifo(PRG_LOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
 		perror("failed to create program loader");
-		*machine->mach_regs.boot_code |= BOOT_ERR_PRG;
+		*(machine->mach_regs.boot_code) |= BOOT_ERR_PRG;
 	}
 }
-
-
 
 int main(int argc,char *argv[])
 {
@@ -238,7 +234,6 @@ machine_soft_reset:
 	free(status);
 
 	pthread_exit(NULL);
-
 
 	return 0;
 }
