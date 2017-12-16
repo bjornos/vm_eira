@@ -110,11 +110,6 @@ static __inline__ void mem_setup(void)
 {
 	memset(machine->RAM, 0x00, RAM_SIZE);
 
-	machine->display.frame_buffer = machine->RAM + MEM_START_GPU_FB;
-
-	machine->mach_regs.prg_loading = (uint8_t *)&machine->RAM[MEM_PRG_LOADING];
-	machine->mach_regs.boot_code = (uint8_t *)&machine->RAM[MEM_BOOT_STATUS];
-
 	machine->mach_regs.boot_msg = (uint8_t *)&machine->RAM[MEM_ROM_BOOT_MSG];
 	memcpy(machine->mach_regs.boot_msg, rom_txt_segment_boot_head,
 		sizeof(rom_txt_segment_boot_head));
@@ -123,33 +118,52 @@ static __inline__ void mem_setup(void)
 	memcpy(machine->mach_regs.boot_anim, rom_txt_segment_boot_anim,
 		sizeof(rom_txt_segment_boot_anim));
 
+	machine->display.frame_buffer = machine->RAM + MEM_START_GPU_FB;
+	machine->mach_regs.prg_loading = (uint8_t *)&machine->RAM[MEM_PRG_LOADING];
+	machine->mach_regs.boot_code = (uint8_t *)&machine->RAM[MEM_BOOT_STATUS];
+
 	*(machine->mach_regs.prg_loading) = PRG_LOADING_DONE;
 	*(machine->mach_regs.boot_code) = BOOT_OK;
-}
-
-static void machine_reset(void) {
-	/* these should already have been removed, but let's be sure */
-	unlink(PRG_LOAD_FIFO);
-	unlink(IO_INPUT_PORT);
-	unlink(IO_OUTPUT_PORT);
-
-	mem_setup();
-
-	cpu_reset(machine);
-
-	display_reset(machine);
-
-	if (!ioport_reset(machine)) {
-		perror("failed to setup I/O ports");
-		*(machine->mach_regs.boot_code) |= BOOT_ERR_IO;
-	}
 
 	memcpy(&machine->RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
+}
 
+static __inline__ void machine_remove_devices(void)
+{
+	unlink(PRG_LOAD_FIFO);
+
+	unlink(IO_INPUT_PORT);
+
+	unlink(IO_OUTPUT_PORT);
+
+	remove("machine");
+}
+
+static __inline__ int machine_create_devices(void)
+{
+	/* these should already have been removed, but let's be sure */
+	machine_remove_devices();
+
+	mkdir("machine", 0777);
+
+	/* create input/output fifo */
+	if (mkfifo(IO_INPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
+		perror("failed to create input port");
+		return 0;
+	}
+
+	if (mkfifo(IO_OUTPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
+		perror("failed to create output port");
+		return 0;
+	}
+
+	/* create the program loader */
 	if (mkfifo(PRG_LOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
 		perror("failed to create program loader");
-		*(machine->mach_regs.boot_code) |= BOOT_ERR_PRG;
+		return 0;
 	}
+
+	return 1;
 }
 
 int main(int argc,char *argv[])
@@ -171,9 +185,20 @@ int main(int argc,char *argv[])
 	if (!machine)
 		return -ENOMEM;
 
+	if (!machine_create_devices()) {
+		machine_remove_devices();
+		return -EIO;
+	}
+
 machine_soft_reset:
 
-	machine_reset();
+	mem_setup();
+
+	cpu_reset(machine);
+
+	display_reset(machine);
+
+	ioport_reset(machine);
 
 	pthread_create(&cpu, NULL, cpu_machine, machine);
 	pthread_create(&display, NULL, display_machine, machine);
@@ -182,7 +207,6 @@ machine_soft_reset:
 	pthread_create(&io_out, NULL, ioport_machine_output, machine);
 
 	program_load_direct(machine, rom, MEM_START_ROM, sizeof(rom));
-
 
 	if (args.load_program) {
 		program_load(machine, args.load_program, MEM_START_PRG);
@@ -197,7 +221,6 @@ machine_soft_reset:
 
 	/* release CPU */
 	machine->cpu_regs.reset = 0;
-	machine->ioport->active = 0;
 
 	pthread_join(cpu, &status);
 
@@ -210,7 +233,8 @@ machine_soft_reset:
 	pthread_join(prg, &status);
 
 	/* soft reboot @ cpu exception */
-	if ((machine->cpu_regs.exception != EXC_SHUTDOWN) && (machine->cpu_regs.exception != EXC_NONE)) {
+	if ((machine->cpu_regs.exception != EXC_SHUTDOWN) &&
+		(machine->cpu_regs.exception != EXC_NONE)) {
 		args.load_program = NULL;
 		args.debug = 0;
 		goto machine_soft_reset;
@@ -230,10 +254,12 @@ machine_soft_reset:
 		dump_io(machine->ioport->input, machine->ioport->output);
 	}
 
+	machine_remove_devices();
+
 	free(machine);
 	free(status);
 
 	pthread_exit(NULL);
 
-	return 0;
+	return EXIT_SUCCESS;
 }

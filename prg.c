@@ -105,7 +105,6 @@ void *program_loader(void *mach)
 		if (!machine->cpu_regs.panic)
 			program_load(machine, prg_name, MEM_START_PRG);
 	}
-	unlink(PRG_LOAD_FIFO);
 
 	pthread_exit(NULL);
 }

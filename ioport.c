@@ -24,27 +24,13 @@
 #include "machine.h"
 #include "utils.h"
 
-int ioport_reset(void *mach)
+void ioport_reset(void *mach)
 {
 	struct _machine *machine = mach;
 
 	/* map I/O */
 	machine->ioport = (struct _io_regs *)&machine->RAM[MEM_START_IOPORT];
 	memset(machine->ioport, 0x00, sizeof(struct _io_regs));
-
-	machine->ioport->active = 1;
-
-	/* create input/output fifo */
-	if (mkfifo(IO_INPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
-		perror("failed to create input port");
-		machine->ioport->active = 0;
-	} else if (mkfifo(IO_OUTPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
-		perror("failed to create output port");
-		unlink(IO_INPUT_PORT);
-		machine->ioport->active = 0;
-	}
-
-	return machine->ioport->active;
 }
 
 void ioport_shutdown(int input_state)
@@ -53,7 +39,7 @@ void ioport_shutdown(int input_state)
 	int fd;
 
 	fd = open(IO_OUTPUT_PORT, O_RDONLY);
-	read(fd, NULL, 5);
+	read(fd, NULL, 4);
 	close(fd);
 
 	in_port = int_to_str(input_state);
@@ -76,7 +62,7 @@ void *ioport_machine_output(void *mach)
 	io_clk_freq.tv_nsec = 1000000000 / hz;
 	io_clk_freq.tv_sec = 0;
 
-	while(!machine->cpu_regs.panic && machine->ioport->active) {
+	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
 		fd = open(IO_OUTPUT_PORT, O_WRONLY);
@@ -98,18 +84,16 @@ void *ioport_machine_output(void *mach)
 		nanosleep(&io_clk_freq, NULL);
 	}
 
-	unlink(IO_OUTPUT_PORT);
-
 	pthread_exit(NULL);
 }
 
 void *ioport_machine_input(void *mach)
 {
 	struct _machine *machine = mach;
-	char inval[5] = { 0 };
+	char inval[4] = { 0 };
 	int fd;
 
-	while(!machine->cpu_regs.panic && machine->ioport->active) {
+	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
 		fd = open(IO_INPUT_PORT, O_RDONLY);
@@ -123,8 +107,6 @@ void *ioport_machine_input(void *mach)
 
 		machine->ioport->input = atoi(inval);
 	}
-
-	unlink(IO_INPUT_PORT);
 
 	pthread_exit(NULL);
 }

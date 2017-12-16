@@ -24,18 +24,17 @@
 
 #include <stdint.h>
 
-#define IO_INPUT_PORT	"/tmp/eira_input"
-#define IO_OUTPUT_PORT	"/tmp/eira_output"
+#define IO_INPUT_PORT	"machine/eira_input"
+#define IO_OUTPUT_PORT	"machine/eira_output"
 
 struct _io_regs {
 	uint16_t input;
 	uint16_t output;
-	uint8_t active;
 };
 
 
 
-int ioport_reset(void *mach);
+void ioport_reset(void *mach);
 
 void ioport_shutdown(int input_state);
 

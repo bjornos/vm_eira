@@ -28,7 +28,7 @@
 
 #define PRG_NAME_MAX		0xff
 #define PRG_MAGIC_HEADER	0xe113a100
-#define PRG_LOAD_FIFO		"/tmp/eira_prg"
+#define PRG_LOAD_FIFO		"machine/eira_prg"
 
 struct _prg_header {
 	uint32_t magic;
