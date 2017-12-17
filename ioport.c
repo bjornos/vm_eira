@@ -28,7 +28,6 @@ void ioport_reset(void *mach)
 {
 	struct _machine *machine = mach;
 
-	/* map I/O */
 	machine->ioport = (struct _io_regs *)&machine->RAM[MEM_START_IOPORT];
 	memset(machine->ioport, 0x00, sizeof(struct _io_regs));
 }
@@ -38,13 +37,13 @@ void ioport_shutdown(int input_state)
 	char *in_port;
 	int fd;
 
-	fd = open(IO_OUTPUT_PORT, O_RDONLY);
+	fd = open(DEV_IO_OUTPUT, O_RDONLY);
 	read(fd, NULL, 4);
 	close(fd);
 
 	in_port = int_to_str(input_state);
 
-	fd = open(IO_INPUT_PORT, O_WRONLY);
+	fd = open(DEV_IO_INPUT, O_WRONLY);
 	write(fd, in_port, strlen(in_port));
 	close(fd);
 
@@ -65,7 +64,7 @@ void *ioport_machine_output(void *mach)
 	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
-		fd = open(IO_OUTPUT_PORT, O_WRONLY);
+		fd = open(DEV_IO_OUTPUT, O_WRONLY);
 		if (fd < 0) {
 			perror("unable to access output port");
 			machine->cpu_regs.exception = EXC_IOPORT;
@@ -96,7 +95,7 @@ void *ioport_machine_input(void *mach)
 	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
-		fd = open(IO_INPUT_PORT, O_RDONLY);
+		fd = open(DEV_IO_INPUT, O_RDONLY);
 		if (fd < 0) {
 			perror("unable to access input port");
 			machine->cpu_regs.exception = EXC_IOPORT;

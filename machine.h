@@ -41,16 +41,10 @@
 #include "memory.h"
 
 #define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
-
-typedef enum {
-	BOOT_OK = 0,
-	BOOT_ERR_IO = 1,
-	BOOT_ERR_PRG = 4,
-} machine_boot_codes;
+#define MACHINE_DEVICE_LIST_END	'\0'
 
 struct _machine_reg {
 		uint8_t *prg_loading;
-		uint8_t *boot_code;
 		uint8_t *boot_msg;
 		uint8_t *boot_anim;
 };

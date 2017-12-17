@@ -57,6 +57,13 @@ static struct argp_option opts[] = {
 	{ 0 },
 };
 
+static const char *device_table[] = {
+	DEV_IO_INPUT,
+	DEV_IO_OUTPUT,
+	DEV_PRG_LOAD,
+	MACHINE_DEVICE_LIST_END
+};
+
 static char* doc = "";
 static char* args_doc = "";
 static args_t args;
@@ -110,60 +117,54 @@ static __inline__ void mem_setup(void)
 {
 	memset(machine->RAM, 0x00, RAM_SIZE);
 
-	machine->mach_regs.boot_msg = (uint8_t *)&machine->RAM[MEM_ROM_BOOT_MSG];
+	machine->mach_regs.boot_msg = (uint8_t *)&machine->RAM + MEM_ROM_BOOT_MSG;
 	memcpy(machine->mach_regs.boot_msg, rom_txt_segment_boot_head,
 		sizeof(rom_txt_segment_boot_head));
 
-	machine->mach_regs.boot_anim = (uint8_t *)&machine->RAM[MEM_ROM_BOOT_ANIM];
+	machine->mach_regs.boot_anim = (uint8_t *)&machine->RAM + MEM_ROM_BOOT_ANIM;
 	memcpy(machine->mach_regs.boot_anim, rom_txt_segment_boot_anim,
 		sizeof(rom_txt_segment_boot_anim));
 
 	machine->display.frame_buffer = machine->RAM + MEM_START_GPU_FB;
-	machine->mach_regs.prg_loading = (uint8_t *)&machine->RAM[MEM_PRG_LOADING];
-	machine->mach_regs.boot_code = (uint8_t *)&machine->RAM[MEM_BOOT_STATUS];
+
+	machine->mach_regs.prg_loading = (uint8_t *)&machine->RAM + MEM_PRG_LOADING;
 
 	*(machine->mach_regs.prg_loading) = PRG_LOADING_DONE;
-	*(machine->mach_regs.boot_code) = BOOT_OK;
 
-	memcpy(&machine->RAM[MEM_START_PRG], program_reset, sizeof(program_reset));
+	memcpy(machine->RAM + MEM_START_PRG, program_reset, sizeof(program_reset));
 }
 
 static __inline__ void machine_remove_devices(void)
 {
-	unlink(PRG_LOAD_FIFO);
+	int dev = 0;
 
-	unlink(IO_INPUT_PORT);
-
-	unlink(IO_OUTPUT_PORT);
+	while(device_table[dev] != MACHINE_DEVICE_LIST_END)
+		unlink(device_table[dev++]);
 
 	remove("machine");
 }
 
 static __inline__ int machine_create_devices(void)
 {
+	int ret = 1;
+	int dev = 0;
+
 	/* these should already have been removed, but let's be sure */
 	machine_remove_devices();
 
 	mkdir("machine", 0777);
 
-	/* create input/output fifo */
-	if (mkfifo(IO_INPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
-		perror("failed to create input port");
-		return 0;
+	while(device_table[dev] != MACHINE_DEVICE_LIST_END) {
+		/* create input/output fifo */
+		if (mkfifo(device_table[dev], S_IRUSR| S_IWUSR) < 0) {
+			perror("failed to create device");
+			printf("device 0x%x, %s\n", dev, device_table[dev]);
+			ret = 0;
+		}
+		dev++;
 	}
 
-	if (mkfifo(IO_OUTPUT_PORT, S_IRUSR| S_IWUSR) < 0) {
-		perror("failed to create output port");
-		return 0;
-	}
-
-	/* create the program loader */
-	if (mkfifo(PRG_LOAD_FIFO, S_IRUSR| S_IWUSR) < 0) {
-		perror("failed to create program loader");
-		return 0;
-	}
-
-	return 1;
+	return ret;
 }
 
 int main(int argc,char *argv[])

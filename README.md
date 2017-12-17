@@ -8,7 +8,7 @@ Current state is a RISC-inspired little endian story with 64kb memory address li
 The plan is to make it cross-platform compatible, but as it is developed under Linux
 current implementation relies on ANSI escape sequences for "screen output".
 
-GPU
+GPU [ -- CURRENTLY DISABLED -- ]
 ---
 The GPU is a co-processor to the main CPU which handles all the display related opcodes.
 It works on an instruction list which the main CPU populates whenever it hit a GPU related
@@ -17,14 +17,14 @@ opcode. The default instruction is "wait" which of course means do nothing.
 I/O PORT
 --------
 The Eira machine has an I/O port consisting of 16 inputs and 16 outputs.
-It is possible to set the input port by writing to the file IO_INPUT_PORT (defined in ioport.h)
-and it is possible to read the output port by reading the file IO_OUTPUT_PORT.
+It is possible to set the input port by writing to the file DEV_IO_INPUT (defined in ioport.h)
+and it is possible to read the output port by reading the file DEV_IO_OUTPUT.
 
 Should the virtual machine unexpectedly crash, it will be neccessary to manually remove
 these files before the machine can be restarted (as you will notice by the error messages).
 
 Example usage:
-ech0 2140 > <IO_INPUT_PORT>
+ech0 2140 > <DEV_IO_INPUT>
 Set input pins 2,3,4,6 and 11 high.
 
 cat <IO_OUPUT_PORT>
@@ -35,10 +35,10 @@ LOADING PROGRAMS
 The program memory can be loaded when the machine is started using command
 line options or at a later stage by using the internal program loader.
 
-The program loader is defined in prg.h as PRG_LOADER_FIFO and is used:
-echo <program name> > <PRG_LOADER_FIFO>
+The program loader is defined in prg.h as DEV_PRG_LOADER and is used:
+echo <program name> > <DEV_PRG_LOADER>
 e.g
-echo bin/eira_test.bin > /tmp/eira_prg
+echo bin/eira_test.bin > machine/prg_load
 
 MEMORY MAP
 ----------

@@ -24,8 +24,8 @@
 
 #include <stdint.h>
 
-#define IO_INPUT_PORT	"machine/eira_input"
-#define IO_OUTPUT_PORT	"machine/eira_output"
+#define DEV_IO_INPUT	"machine/io_input"
+#define DEV_IO_OUTPUT	"machine/io_output"
 
 struct _io_regs {
 	uint16_t input;
