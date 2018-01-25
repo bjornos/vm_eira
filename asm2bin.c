@@ -32,10 +32,50 @@
 #include "rom.h"
 #include "testprogram.h"
 
+/*
+Hur hantera labels? 2 pass.
+om börjar med en karta över hur labels förehåller sig. hur många labels har vi? spelar ingen roll....
 
+kanske göra denna i c++...
+
+
+En tabell
+L1 = addr X
+L2 = addr 3
+
+CONST 
+
+symbolkartan.
+l0(start)
+
+l1
+af
+asf
+goto l3
+
+l2
+goto l1
+
+l3
+af
+asf
+asf
+goto l2
+
+    behöver veta
+l1: l3 
+
+
+l2: l1
+
+
+l3: l2
+
+
+*/
 typedef struct {
 	char *instr;
-	int val;
+	int val; // mer än bara val kanske. label. 
 } t_opcode;
 
 static t_opcode instr_table[] = {
@@ -68,133 +108,239 @@ typedef struct  {
 } machine_code;
 
 
-uint32_t encode_instr(const char line[])
+
+const char *char_type_instruction = "abcdefghijklmnopqrstuvwxyz";
+
+const char *char_type_argument = "1234567890rRxX@";
+
+const char *char_type_spaces = " \t\n";
+
+const char char_type_argstop[] = ",;\t\n ";
+
+
+const char char_delimiters[] = {';',' ','\n','\t'};
+
+const char char_argstop[] = {',','\n','\t',' '};
+
+const char char_argstop2[] = {'\n','\t',' ',';'};
+
+#define DBG(x) x
+
+#define OPCODE_LEN_MAX	16
+#define ARG_LEN_MAX 16
+#define LINE_LENGTH_MAX 64
+
+static __inline__ int is_comment(const char *c)
 {
-	int c;
-	char instr[16], a1[16],a2[16];
-	uint32_t arg1,arg2;
-	int src,dst;
+	return (*c == ';');
+}
+
+
+int char_is_type(const char *c, const char *match_type)
+{
+	for (int d = 0; d < strlen(match_type); d++) {
+			DBG(printf("**found %c \n",*(match_type + d)));
+		if (*c == *(match_type + d)) {
+			DBG(printf("found %c (%d) \n",*(match_type + d), *(match_type + d)));
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static __inline__ void get_argument(char **c, char *arg, int line, int *col)
+{
+	int pos = 0;
+
+	while (char_is_type(*c, char_type_argument) && (pos < ARG_LEN_MAX)) {
+		*(arg + pos) = *(*c);
+		*(*c)++;
+		if (*col > LINE_LENGTH_MAX) {
+			printf("%s: Line %d: To long (> %d chars).", __func__, line, *col);
+			exit(EXIT_FAILURE);
+		}
+		(*col)++;
+		pos++;
+	}
+	*(arg + pos) = '\0';
+}
+
+enum {
+	DST_MEM,
+	DST_REG,
+	SRC_REG,
+	SRC_MEM,
+};
+
+static __inline__ void skip_spaces(char **c, int line, int *col)
+{
+	while (char_is_type(*c, char_type_spaces)) {
+
+		*(*c)++;
+		if (*col > LINE_LENGTH_MAX) {
+			printf("%s: Line %d: To long (> %d chars).", __func__, line, *col);
+			exit(EXIT_FAILURE);
+		}
+		(*col)++;
+	}
+}
+
+static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int *col)
+{
+	char arg1[16];
+	char arg2[16];
+	int src, dst;
+	int reg_src, mem_src, reg_dst, mem_dst;
+
+	DBG(printf("decode mov\n"));
+
+	skip_spaces(&c, line, col);
+
+	get_argument(&c, arg1, line, col);
+	skip_spaces(&c, line, col);
+
+	DBG(printf("arg1: %s \n", arg1));
+
+
+	switch (arg1[0]) {
+		case 'R':
+		case 'r':
+			dst = DST_REG;
+			reg_dst = atoi(&arg1[1]);
+			DBG(printf("regdst: %d\n", reg_dst));
+			if (reg_dst < 0 || reg_dst > 15) { // GP_REG_MAX
+				printf("Error (%d %d): register %s out of bounds.\n", line, *col, arg1);
+				exit(EXIT_FAILURE);
+			}
+			mnemonic |= OP_DST_REG;
+			mnemonic |= (reg_dst << 8);
+			break;
+		case '@':
+			dst = DST_MEM;
+			mem_dst = atoi(&arg1[1]);
+			DBG(printf("memdst: %d\n", mem_dst));
+			if ((mem_dst < MEM_START_RW) || (mem_dst > 65000)) {  // RAM_SIZE
+				printf("Error (%d %d): address %s out of bounds.\n", line, *col, arg1);
+				exit(EXIT_FAILURE);
+			}
+			mnemonic |= OP_DST_MEM;
+			mnemonic |= (mem_dst << 16);
+			break;
+	}
+
+	if (*c != ',') {
+		printf("Syntax Error at row %d column %d): Don't know what to do with %c\n", line, *col, *c);
+		exit(EXIT_FAILURE);
+	} else
+		*c++;
+
+	skip_spaces(&c, line, col);
+
+	get_argument(&c, arg2, line, col);
+
+	DBG(printf("arg2: %s\n", arg2));
+
+
+	switch (arg2[0]) {
+		case 'R':
+		case 'r':
+			reg_src = atoi(&arg2[1]);
+			DBG(printf("regsrc: %d\n", reg_src));
+			if (reg_src < 0 || reg_src > 15) { // GP_REG_MAX
+				printf("Error (%d %d): register %s out of bounds.\n", line, *col, arg2);
+				exit(EXIT_FAILURE);
+			}
+			mnemonic |= OP_SRC_REG;
+			if (dst == DST_REG)
+				mnemonic |= (reg_src << 16);
+			else
+				mnemonic |= (reg_src << 8);
+			break;
+		case '@':
+			mem_src = atoi(&arg2[1]);
+			DBG(printf("memsrc: %d\n", mem_src));
+			if ((mem_src < 0) || (mem_src > 65000)) {  // RAM_SIZE
+				printf("Error (%d %d): address %s out of bounds.\n", line, *col, arg2);
+				exit(EXIT_FAILURE);
+			}
+			mnemonic |= OP_SRC_MEM;
+			mnemonic |= (mem_src << 16);
+			break;
+		case  '0':
+		case  '1':
+		case  '2':
+		case  '3':
+		case  '4':
+		case  '5':
+		case  '6':
+		case  '7':
+		case  '8':
+		case  '9':
+			reg_src = atoi(&arg2[0]);
+						printf("immval: %d\n", reg_src);
+
+			mnemonic |= (reg_src << 16);
+			break;
+		default:
+				printf("Error (%d %d): Don't know what to do with %s\n", line, *col, arg2);
+				exit(EXIT_FAILURE);
+
+	}
+
+
+	return mnemonic;
+}
+
+
+
+
+uint32_t encode_instr2(const char *code_line, int line)
+{
 	machine_code code;
 	uint32_t mnemonic = 0;
+	char *c;
+	char instr[OPCODE_LEN_MAX];
+	char arg1[16];
+	char arg2[16];
+	int pos = 0;
+	int col = 0;
+	uint32_t ret;
 
-	int dst_reg, dst_mem;
-	int src_reg, src_mem;
+	c = code_line;
 
-	// parse opcode
-	c = 0;
-	while ((line[c] !=' ') && (line[c] != ';')) {
-		instr[c] = line[c];
-		c++;
+	if (is_comment(c)) {
+		printf("decode as comment.\n");
+		return 0;
 	}
-	instr[c] = '\0';
+
+	while (char_is_type(c, char_type_instruction) && (pos < OPCODE_LEN_MAX)) {
+		instr[pos++] = *c++;
+		col++;
+	}
+	instr[pos] = '\0';
 
 	code.instr = which_instr(instr);
 	code.args = 0;
 
 	switch(code.instr) {
-		case mov: printf("decode as move\n");
-				code.args = 2;
+		case mov: ret = decode_mov(code.instr, c, line, &pos);
 			break;
 		case halt:
 				printf("decoded as halt\n");
-				code.args = 0;
+				ret = halt;
+			//	code.args = 0;
 			break;
 		default:
-			printf("unknown instruction %s\n",instr);
-			return -1;
+			printf("%s: unknown instruction %s @ line %d\n",__func__, instr, line);
+			return 0;
 		break;
 	}
 
-	src_reg = src_mem = dst_reg = dst_mem = 0;
-
-	if (code.args > 0) {
-		int c2 = 0;
-
-		while ((line[c] ==',') || (line[c] == ';') || (line[c] == ' '))
-			c++;
-
-		while ((line[c] !=',') && (line[c] != ';') && (line[c] != ' ') && (c < 80)) {
-			a1[c2] = line[c];
-			c++;
-			c2++;
-		}
-		if (c > 79) {
-			printf("too long arg1.\n");
-			return -1;
-		}
-		a1[c2] = '\0';
-		printf("arg1: %s\n", a1);
-
-		if (a1[0] == 'r') {
-			dst_reg = 1;
-			arg1 = atoi(&a1[1]);
-			printf("src = reg  %d\n",arg1);
-		} else if (a1[0] == '@') {
-			dst_mem = 1;
-			arg1 = atoi(&a1[1]);
-			printf("src = mem @ %d\n",arg1);
-		} else
-			printf("dst = ???\n");
-
-	}
-
-
-	if (code.args > 1) {
-		int c3 = 0;
-
-		while ((line[c] ==',') || (line[c] == ';') || (line[c] == ' '))
-			c++;
-
-		while ((line[c] !=',') && (line[c] != ';') && (line[c] != ' ') && (line[c] != '\0') && (c < 80)) {
-			a2[c3] = line[c];
-			c++;
-			c3++;
-		}
-		if ((c > 79) || (line[c] == '\0')) {
-			printf("too long arg2 (%d).\n",c);
-			return -1;
-		}
-		a2[c3] = '\0';
-		printf("arg2: %s\n", a2);
-
-		if (a2[0] == 'r') {
-			src_reg = 1;
-			arg2 = atoi(&a2[1]);
-			printf("src = reg  %d\n",arg2);
-		} else if (a2[0] == '@') {
-			src_mem = 1;
-			arg2 = atoi(&a2[1]);
-			printf("src = mem @ %d\n",arg2);
-		} else {
-			arg2 = atoi(&a2[0]);
-			printf("src =value - %d\n",arg2);
-		}
-	}
-
-
-	mnemonic = code.instr;
-	if (code.args) {
-		if (code.args == 1)
-			mnemonic |= (arg2 << 16);
-		else {
-			if (dst_reg)
-				mnemonic |= OP_DST_REG;
-			if (src_reg)
-				mnemonic |= OP_SRC_REG;
-			if (src_mem)
-				mnemonic |= OP_SRC_MEM;
-			if (dst_mem)
-				mnemonic |= OP_DST_MEM;
-			if (dst_mem)
-				mnemonic |= (arg2 << 8) | (arg1 << 16);
-			else
-				mnemonic |= (arg1 << 8) | (arg2 << 16);
-
-		}
-	}
-
-	return mnemonic;
+	return ret;
 }
+
+
 
 
 int main(int argc,char *argv[])
@@ -204,7 +350,7 @@ int main(int argc,char *argv[])
 	char line[0xff];
 	char instr[0xff];
 	int abort = 0;
-	uint32_t enc[255];
+	int32_t enc[255];
 	int e;
 	struct _prg_format program;
 
@@ -212,7 +358,7 @@ int main(int argc,char *argv[])
 
 	while (fgets(line, sizeof(line), prg) && !abort) {
 		printf("%s", line);
-		enc[e] = encode_instr(line);
+		enc[e] = encode_instr2(line, e);
 		if (enc[e] == -1)
 			abort = 1;
 		else
