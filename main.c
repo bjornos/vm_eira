@@ -149,7 +149,6 @@ static __inline__ int machine_create_devices(void)
 	int ret = 1;
 	int dev = 0;
 
-	/* these should already have been removed, but let's be sure */
 	machine_remove_devices();
 
 	mkdir("machine", 0777);
@@ -158,7 +157,7 @@ static __inline__ int machine_create_devices(void)
 		/* create input/output fifo */
 		if (mkfifo(device_table[dev], S_IRUSR| S_IWUSR) < 0) {
 			perror("failed to create device");
-			printf("device 0x%x, %s\n", dev, device_table[dev]);
+			DBG(printf("device 0x%x, %s\n", dev, device_table[dev]));
 			ret = 0;
 		}
 		dev++;
