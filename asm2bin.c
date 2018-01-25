@@ -32,50 +32,9 @@
 #include "rom.h"
 #include "testprogram.h"
 
-/*
-Hur hantera labels? 2 pass.
-om börjar med en karta över hur labels förehåller sig. hur många labels har vi? spelar ingen roll....
-
-kanske göra denna i c++...
-
-
-En tabell
-L1 = addr X
-L2 = addr 3
-
-CONST 
-
-symbolkartan.
-l0(start)
-
-l1
-af
-asf
-goto l3
-
-l2
-goto l1
-
-l3
-af
-asf
-asf
-goto l2
-
-    behöver veta
-l1: l3 
-
-
-l2: l1
-
-
-l3: l2
-
-
-*/
 typedef struct {
 	char *instr;
-	int val; // mer än bara val kanske. label. 
+	int val;
 } t_opcode;
 
 static t_opcode instr_table[] = {
