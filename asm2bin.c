@@ -170,7 +170,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			DBG(printf("regdst: %d\n", reg_dst));
 			if (reg_dst < 0 || reg_dst > 15) { // GP_REG_MAX
 				printf("Error (%d %d): register %s out of bounds.\n", line, *col, arg1);
-				exit(EXIT_FAILURE);
+				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_DST_REG;
 			mnemonic |= (reg_dst << 8);
@@ -181,7 +181,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			DBG(printf("memdst: %d\n", mem_dst));
 			if ((mem_dst < MEM_START_RW) || (mem_dst > 65000)) {  // RAM_SIZE
 				printf("Error (%d %d): address %s out of bounds.\n", line, *col, arg1);
-				exit(EXIT_FAILURE);
+				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_DST_MEM;
 			mnemonic |= (mem_dst << 16);
@@ -189,7 +189,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 	}
 
 	if (*c != ',') {
-		printf("Syntax Error at row %d column %d): Don't know what to do with %c\n", line, *col, *c);
+		printf("Syntax Error at row %d column %d): Exptected ',' - Don't know what to do with %c\n", line, *col, *c);
 		exit(EXIT_FAILURE);
 	} else
 		*c++;
@@ -208,7 +208,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			DBG(printf("regsrc: %d\n", reg_src));
 			if (reg_src < 0 || reg_src > 15) { // GP_REG_MAX
 				printf("Error (%d %d): register %s out of bounds.\n", line, *col, arg2);
-				exit(EXIT_FAILURE);
+				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_SRC_REG;
 			if (dst == DST_REG)
@@ -221,7 +221,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			DBG(printf("memsrc: %d\n", mem_src));
 			if ((mem_src < 0) || (mem_src > 65000)) {  // RAM_SIZE
 				printf("Error (%d %d): address %s out of bounds.\n", line, *col, arg2);
-				exit(EXIT_FAILURE);
+				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_SRC_MEM;
 			mnemonic |= (mem_src << 16);
@@ -237,13 +237,13 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 		case  '8':
 		case  '9':
 			reg_src = atoi(&arg2[0]);
-						printf("immval: %d\n", reg_src);
+			DBG(printf("immval: %d\n", reg_src));
 
 			mnemonic |= (reg_src << 16);
 			break;
 		default:
 				printf("Error (%d %d): Don't know what to do with %s\n", line, *col, arg2);
-				exit(EXIT_FAILURE);
+				mnemonic = OPCODE_ENCODE_ERROR;
 
 	}
 
@@ -254,23 +254,20 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 
 
 
-uint32_t encode_instr2(const char *code_line, int line)
+uint32_t encode_instr(const char *code_line, int line)
 {
 	machine_code code;
 	uint32_t mnemonic = 0;
 	char *c;
 	char instr[OPCODE_LEN_MAX];
-	char arg1[16];
-	char arg2[16];
 	int pos = 0;
 	int col = 0;
-	uint32_t ret;
 
 	c = code_line;
 
 	if (is_comment(c)) {
-		printf("decode as comment.\n");
-		return 0;
+		DBG(printf("decode as comment.\n"));
+		return OPCODE_ENCODE_COMMENT;
 	}
 
 	while (char_is_type(c, char_type_instruction) && (pos < OPCODE_LEN_MAX)) {
@@ -283,20 +280,19 @@ uint32_t encode_instr2(const char *code_line, int line)
 	code.args = 0;
 
 	switch(code.instr) {
-		case mov: ret = decode_mov(code.instr, c, line, &pos);
+		case mov: mnemonic = decode_mov(code.instr, c, line, &pos);
 			break;
 		case halt:
-				printf("decoded as halt\n");
-				ret = halt;
-			//	code.args = 0;
+				DBG(printf("decoded as halt\n"));
+				mnemonic = halt;
 			break;
 		default:
 			printf("%s: unknown instruction %s @ line %d\n",__func__, instr, line);
-			return 0;
+			return OPCODE_ENCODE_ERROR;
 		break;
 	}
 
-	return ret;
+	return mnemonic;
 }
 
 
@@ -317,14 +313,19 @@ int main(int argc,char *argv[])
 
 	while (fgets(line, sizeof(line), prg) && !abort) {
 		printf("%s", line);
-		enc[e] = encode_instr2(line, e);
-		if (enc[e] == -1)
+		enc[e] = encode_instr(line, e);
+		if (enc[e] == OPCODE_ENCODE_ERROR) {
 			abort = 1;
-		else
-			printf("0x%x\n", enc[e]);
-		e++;
+		}
+		else if (enc[e] != OPCODE_ENCODE_COMMENT) {
+			DBG(printf("0x%x\n", enc[e]));
+			e++;
+		}
 	}
 	fclose(prg);
+
+	if (abort)
+		return EXIT_FAILURE;
 
 	program.header.code_size = e * sizeof(uint32_t);
 	program.header.magic = PRG_MAGIC_HEADER;

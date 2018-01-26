@@ -24,6 +24,12 @@
 
 #define OPCODE_NAME_MAX	16
 
+/* compiler magic for comment - not really a valid opcode */
+#define OPCODE_ENCODE_COMMENT	0xffff
+
+/* compiler magic for complications - not really a valid opcode */
+#define OPCODE_ENCODE_ERROR		0xfffe
+
 /**
  * instruction: halt
  *
