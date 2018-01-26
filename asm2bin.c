@@ -236,11 +236,12 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 		case  '7':
 		case  '8':
 		case  '9':
-			reg_src = atoi(&arg2[0]);
-			DBG(printf("immval: %d\n", reg_src));
-
-			mnemonic |= (reg_src << 16);
-			break;
+			if (!(mnemonic & OP_DST_MEM)) {
+				reg_src = atoi(&arg2[0]);
+				DBG(printf("immval: %d\n", reg_src));
+				mnemonic |= (reg_src << 16);
+				break;
+			}
 		default:
 				printf("Error (%d %d): Don't know what to do with %s\n", line, *col, arg2);
 				mnemonic = OPCODE_ENCODE_ERROR;
@@ -254,7 +255,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 
 
 
-uint32_t encode_instr(const char *code_line, int line)
+uint32_t encode_instr(const char *code_line, int line_nbr)
 {
 	machine_code code;
 	uint32_t mnemonic = 0;
@@ -279,15 +280,17 @@ uint32_t encode_instr(const char *code_line, int line)
 	code.instr = which_instr(instr);
 	code.args = 0;
 
+	printf("line = %d\n", line_nbr);
+
 	switch(code.instr) {
-		case mov: mnemonic = decode_mov(code.instr, c, line, &pos);
+		case mov: mnemonic = decode_mov(code.instr, c, line_nbr, &pos);
 			break;
 		case halt:
 				DBG(printf("decoded as halt\n"));
 				mnemonic = halt;
 			break;
 		default:
-			printf("%s: unknown instruction %s @ line %d\n",__func__, instr, line);
+			printf("%s: unknown instruction %s @ line %d\n",__func__, instr, line_nbr);
 			return OPCODE_ENCODE_ERROR;
 		break;
 	}
@@ -307,13 +310,14 @@ int main(int argc,char *argv[])
 	int abort = 0;
 	int32_t enc[255];
 	int e;
+	unsigned int line_nbr;
 	struct _prg_format program;
 
-	e = 0;
+	e = line_nbr = 0;
 
 	while (fgets(line, sizeof(line), prg) && !abort) {
 		printf("%s", line);
-		enc[e] = encode_instr(line, e);
+		enc[e] = encode_instr(line, line_nbr++);
 		if (enc[e] == OPCODE_ENCODE_ERROR) {
 			abort = 1;
 		}
