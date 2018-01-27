@@ -99,7 +99,6 @@ static __inline__ int is_comment(const char *c)
 int char_is_type(const char *c, const char *match_type)
 {
 	for (int d = 0; d < strlen(match_type); d++) {
-			DBG(printf("**found %c \n",*(match_type + d)));
 		if (*c == *(match_type + d)) {
 			DBG(printf("found %c (%d) \n",*(match_type + d), *(match_type + d)));
 			return 1;
@@ -115,7 +114,7 @@ static __inline__ void get_argument(char **c, char *arg, int line, int *col)
 
 	while (char_is_type(*c, char_type_argument) && (pos < ARG_LEN_MAX)) {
 		*(arg + pos) = *(*c);
-		*(*c)++;
+		(void)*(*c)++;
 		if (*col > LINE_LENGTH_MAX) {
 			printf("%s: Line %d: To long (> %d chars).", __func__, line, *col);
 			exit(EXIT_FAILURE);
@@ -130,7 +129,7 @@ static __inline__ void skip_spaces(char **c, int line, int *col)
 {
 	while (char_is_type(*c, char_type_spaces)) {
 
-		*(*c)++;
+		(void)*(*c)++;
 		if (*col > LINE_LENGTH_MAX) {
 			printf("%s: Line %d: To long (> %d chars).", __func__, line, *col);
 			exit(EXIT_FAILURE);
@@ -182,7 +181,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 		printf("Syntax Error at row %d column %d): Exptected ',' - Don't know what to do with %c\n", line, *col, *c);
 		exit(EXIT_FAILURE);
 	} else
-		*c++;
+		(void)*c++;
 
 	skip_spaces(&c, line, col);
 
@@ -195,7 +194,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 		case 'r':
 			reg_src = atoi(&arg2[1]);
 			DBG(printf("regsrc: %d\n", reg_src));
-			if (reg_src < 0 || reg_src > 15) { // GP_REG_MAX
+			if (reg_src < 0 || reg_src > GP_REG_MAX) {
 				printf("Error (%d %d): register %s out of bounds.\n", line, *col, arg2);
 				return OPCODE_ENCODE_ERROR;
 			}
@@ -208,7 +207,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 		case '@':
 			mem_src = atoi(&arg2[1]);
 			DBG(printf("memsrc: %d\n", mem_src));
-			if ((mem_src < 0) || (mem_src > 65000)) {  // RAM_SIZE
+			if ((mem_src < 0) || (mem_src > RAM_SIZE)) {
 				printf("Error (%d %d): address %s out of bounds.\n", line, *col, arg2);
 				return OPCODE_ENCODE_ERROR;
 			}
