@@ -32,6 +32,18 @@
 #include "rom.h"
 #include "testprogram.h"
 
+enum {
+	DST_MEM,
+	DST_REG,
+	SRC_REG,
+	SRC_MEM,
+};
+
+typedef struct  {
+	int instr;
+	int args;
+} machine_code;
+
 typedef struct {
 	char *instr;
 	int val;
@@ -45,7 +57,25 @@ static t_opcode instr_table[] = {
 		{ "mov", mov },
 };
 
+#define DBG(x) x
+
 #define NUM_INSTRUCTIONS (sizeof(instr_table) / sizeof(t_opcode))
+
+#define OPCODE_LEN_MAX	16
+
+#define ARG_LEN_MAX 16
+
+#define LINE_LENGTH_MAX 64
+
+
+const char *char_type_instruction = "abcdefghijklmnopqrstuvwxyz";
+
+const char *char_type_argument = "1234567890rRxX@";
+
+const char *char_type_spaces = " \t\n";
+
+const char char_type_argstop[] = ",;\t\n ";
+
 
 int which_instr(char *opcode)
 {
@@ -61,39 +91,10 @@ int which_instr(char *opcode)
 	return -1;
 }
 
-typedef struct  {
-	int instr;
-	int args;
-} machine_code;
-
-
-
-const char *char_type_instruction = "abcdefghijklmnopqrstuvwxyz";
-
-const char *char_type_argument = "1234567890rRxX@";
-
-const char *char_type_spaces = " \t\n";
-
-const char char_type_argstop[] = ",;\t\n ";
-
-
-const char char_delimiters[] = {';',' ','\n','\t'};
-
-const char char_argstop[] = {',','\n','\t',' '};
-
-const char char_argstop2[] = {'\n','\t',' ',';'};
-
-#define DBG(x) x
-
-#define OPCODE_LEN_MAX	16
-#define ARG_LEN_MAX 16
-#define LINE_LENGTH_MAX 64
-
 static __inline__ int is_comment(const char *c)
 {
 	return (*c == ';');
 }
-
 
 int char_is_type(const char *c, const char *match_type)
 {
@@ -125,13 +126,6 @@ static __inline__ void get_argument(char **c, char *arg, int line, int *col)
 	*(arg + pos) = '\0';
 }
 
-enum {
-	DST_MEM,
-	DST_REG,
-	SRC_REG,
-	SRC_MEM,
-};
-
 static __inline__ void skip_spaces(char **c, int line, int *col)
 {
 	while (char_is_type(*c, char_type_spaces)) {
@@ -149,7 +143,6 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 {
 	char arg1[16];
 	char arg2[16];
-	int src, dst;
 	int reg_src, mem_src, reg_dst, mem_dst;
 
 	DBG(printf("decode mov\n"));
@@ -161,14 +154,12 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 
 	DBG(printf("arg1: %s \n", arg1));
 
-
 	switch (arg1[0]) {
 		case 'R':
 		case 'r':
-			dst = DST_REG;
 			reg_dst = atoi(&arg1[1]);
 			DBG(printf("regdst: %d\n", reg_dst));
-			if (reg_dst < 0 || reg_dst > 15) { // GP_REG_MAX
+			if (reg_dst < 0 || reg_dst > GP_REG_MAX) {
 				printf("Error (%d %d): register %s out of bounds.\n", line, *col, arg1);
 				return OPCODE_ENCODE_ERROR;
 			}
@@ -176,10 +167,9 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			mnemonic |= (reg_dst << 8);
 			break;
 		case '@':
-			dst = DST_MEM;
 			mem_dst = atoi(&arg1[1]);
 			DBG(printf("memdst: %d\n", mem_dst));
-			if ((mem_dst < MEM_START_RW) || (mem_dst > 65000)) {  // RAM_SIZE
+			if ((mem_dst < MEM_START_RW) || (mem_dst > RAM_SIZE)) {
 				printf("Error (%d %d): address %s out of bounds.\n", line, *col, arg1);
 				return OPCODE_ENCODE_ERROR;
 			}
@@ -200,7 +190,6 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 
 	DBG(printf("arg2: %s\n", arg2));
 
-
 	switch (arg2[0]) {
 		case 'R':
 		case 'r':
@@ -211,7 +200,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_SRC_REG;
-			if (dst == DST_REG)
+			if (mnemonic & OP_DST_REG)
 				mnemonic |= (reg_src << 16);
 			else
 				mnemonic |= (reg_src << 8);
@@ -252,10 +241,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 	return mnemonic;
 }
 
-
-
-
-uint32_t encode_instr(const char *code_line, int line_nbr)
+uint32_t encode_instr(char *code_line, int line_nbr)
 {
 	machine_code code;
 	uint32_t mnemonic = 0;
@@ -298,17 +284,13 @@ uint32_t encode_instr(const char *code_line, int line_nbr)
 	return mnemonic;
 }
 
-
-
-
 int main(int argc,char *argv[])
 {
 	char const* const filename = argv[1];
 	FILE *prg = fopen(filename, "r");
 	char line[0xff];
-	char instr[0xff];
 	int abort = 0;
-	int32_t enc[255];
+	uint32_t enc[255];
 	int e;
 	unsigned int line_nbr;
 	struct _prg_format program;
