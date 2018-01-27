@@ -157,7 +157,7 @@ static __inline__ int machine_create_devices(void)
 		/* create input/output fifo */
 		if (mkfifo(device_table[dev], S_IRUSR| S_IWUSR) < 0) {
 			perror("failed to create device");
-			DBG(printf("device 0x%x, %s\n", dev, device_table[dev]));
+			printf("device 0x%x, %s\n", dev, device_table[dev]);
 			ret = 0;
 		}
 		dev++;
