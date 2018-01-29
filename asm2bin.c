@@ -269,11 +269,15 @@ uint32_t encode_instr(char *code_line, int line_nbr)
 	printf("line = %d\n", line_nbr);
 
 	switch(code.instr) {
-		case mov: mnemonic = decode_mov(code.instr, c, line_nbr, &pos);
-			break;
 		case halt:
 				DBG(printf("decoded as halt\n"));
 				mnemonic = halt;
+			break;
+		case nop:
+				DBG(printf("decoded as nop\n"));
+				mnemonic = nop;
+			break;
+		case mov: mnemonic = decode_mov(code.instr, c, line_nbr, &pos);
 			break;
 		default:
 			printf("%s:%d: error: unknown instruction %s\n",FILE_NAME, line_nbr, instr);
