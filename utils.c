@@ -110,7 +110,7 @@ void dump_regs(uint16_t *REG)
 	printf("Registers:\n=========\n");
 	for (i=0; i < (16 / grid); i++) {
 		for (o=0; o < grid; o++) {
-			printf("R%d:\t%d\t",r,*(REG + r));
+			printf("R%d:\t%d  \t",r,*(REG + r) & 0xffff);
 			r++;
 		}
 		printf("\n");
