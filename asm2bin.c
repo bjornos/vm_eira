@@ -32,6 +32,8 @@
 #include "rom.h"
 #include "testprogram.h"
 
+static const char* FILE_NAME;
+
 enum {
 	DST_MEM,
 	DST_REG,
@@ -159,7 +161,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			reg_dst = atoi(&arg1[1]);
 			DBG(printf("regdst: %d\n", reg_dst));
 			if (reg_dst < 0 || reg_dst > GP_REG_MAX) {
-				printf("Error (%d %d): register %s out of bounds.\n", line, *col, arg1);
+				printf("%s:%d:%d: error: register %s out of bounds.\n", FILE_NAME, line, *col, arg1);
 				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_DST_REG;
@@ -169,7 +171,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			mem_dst = atoi(&arg1[1]);
 			DBG(printf("memdst: %d\n", mem_dst));
 			if ((mem_dst < MEM_START_RW) || (mem_dst > RAM_SIZE)) {
-				printf("Error (%d %d): address %s out of bounds.\n", line, *col, arg1);
+				printf("%s:%d:%d: address %s out of bounds.\n", FILE_NAME, line, *col, arg1);
 				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_DST_MEM;
@@ -178,7 +180,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 	}
 
 	if (*c != ',') {
-		printf("Syntax Error at row %d column %d): Exptected ',' - Don't know what to do with %c\n", line, *col, *c);
+		printf("%s:%d:%d: syntax error: exptected ',' - Don't know what to do with '%c'\n", FILE_NAME, line, *col, *c);
 		exit(EXIT_FAILURE);
 	} else
 		(void)*c++;
@@ -195,7 +197,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			reg_src = atoi(&arg2[1]);
 			DBG(printf("regsrc: %d\n", reg_src));
 			if (reg_src < 0 || reg_src > GP_REG_MAX) {
-				printf("Error (%d %d): register %s out of bounds.\n", line, *col, arg2);
+				printf("%s:%d:%d: error: register %s out of bounds.\n", FILE_NAME, line, *col, arg2);
 				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_SRC_REG;
@@ -208,7 +210,7 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 			mem_src = atoi(&arg2[1]);
 			DBG(printf("memsrc: %d\n", mem_src));
 			if ((mem_src < 0) || (mem_src > RAM_SIZE)) {
-				printf("Error (%d %d): address %s out of bounds.\n", line, *col, arg2);
+				printf("%s:%d:%d: error: address %s out of bounds.\n", FILE_NAME, line, *col, arg2);
 				return OPCODE_ENCODE_ERROR;
 			}
 			mnemonic |= OP_SRC_MEM;
@@ -231,11 +233,10 @@ static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int 
 				break;
 			}
 		default:
-				printf("Error (%d %d): Don't know what to do with %s\n", line, *col, arg2);
+				printf("%s:%d:%d error: Don't know what to do with %s\n", FILE_NAME,line, *col, c);
 				mnemonic = OPCODE_ENCODE_ERROR;
 
 	}
-
 
 	return mnemonic;
 }
@@ -275,7 +276,7 @@ uint32_t encode_instr(char *code_line, int line_nbr)
 				mnemonic = halt;
 			break;
 		default:
-			printf("%s: unknown instruction %s @ line %d\n",__func__, instr, line_nbr);
+			printf("%s:%d: error: unknown instruction %s\n",FILE_NAME, line_nbr, instr);
 			return OPCODE_ENCODE_ERROR;
 		break;
 	}
@@ -285,14 +286,16 @@ uint32_t encode_instr(char *code_line, int line_nbr)
 
 int main(int argc,char *argv[])
 {
-	char const* const filename = argv[1];
-	FILE *prg = fopen(filename, "r");
+	FILE *prg;
 	char line[0xff];
 	int abort = 0;
 	uint32_t enc[255];
 	int e;
 	unsigned int line_nbr;
 	struct _prg_format program;
+
+	FILE_NAME = argv[1];
+	prg = fopen(FILE_NAME, "r");
 
 	e = line_nbr = 0;
 
