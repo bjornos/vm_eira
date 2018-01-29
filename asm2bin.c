@@ -140,13 +140,13 @@ static __inline__ void skip_spaces(char **c, int line, int *col)
 	}
 }
 
-static __inline__ uint32_t decode_mov(uint32_t mnemonic, char *c, int line, int *col)
+static __inline__ uint32_t decode_complex(const char *instr, uint32_t mnemonic, char *c, int line, int *col)
 {
 	char arg1[16];
 	char arg2[16];
 	int reg_src, mem_src, reg_dst, mem_dst;
 
-	DBG(printf("decode mov\n"));
+	DBG(printf("%s'\n", instr));
 
 	skip_spaces(&c, line, col);
 
@@ -266,18 +266,22 @@ uint32_t encode_instr(char *code_line, int line_nbr)
 	code.instr = which_instr(instr);
 	code.args = 0;
 
-	printf("line = %d\n", line_nbr);
+	printf("l %d: decoded as '", line_nbr);
 
 	switch(code.instr) {
 		case halt:
-				DBG(printf("decoded as halt\n"));
+				DBG(printf("halt'.\n"));
 				mnemonic = halt;
 			break;
 		case nop:
-				DBG(printf("decoded as nop\n"));
+				DBG(printf("nop'.\n"));
 				mnemonic = nop;
 			break;
-		case mov: mnemonic = decode_mov(code.instr, c, line_nbr, &pos);
+		case mov: mnemonic = decode_complex("mov", code.instr, c, line_nbr, &pos);
+			break;
+		case add: mnemonic = decode_complex("add", code.instr, c, line_nbr, &pos);
+			break;
+		case sub: mnemonic = decode_complex("sub", code.instr, c, line_nbr, &pos);
 			break;
 		default:
 			printf("%s:%d: error: unknown instruction %s\n",FILE_NAME, line_nbr, instr);
