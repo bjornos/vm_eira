@@ -8,6 +8,17 @@ Current state is a RISC-inspired little endian story with 64kb memory address li
 The plan is to make it cross-platform compatible, but as it is developed under Linux
 current implementation relies on ANSI escape sequences for "screen output".
 
+Compiling
+---------
+
+vm_eira builds with cmake:
+#cmake .
+#make
+
+Executables are placed in the "build" directory
+
+HARDWARE DESCRIPION
+
 GPU [ -- CURRENTLY DISABLED -- ]
 ---
 The GPU is a co-processor to the main CPU which handles all the display related opcodes.

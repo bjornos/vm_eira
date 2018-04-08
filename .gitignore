@@ -1,2 +1,7 @@
-vm_eira
-*.o
+CMakeCache.txt
+MakeFiles/
+CMakeFiles/
+Makefile
+build/
+cmake_install.cmake
+
