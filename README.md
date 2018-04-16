@@ -1,4 +1,4 @@
-#VM_EIRA
+# VM_EIRA
 My own virtual machine. Just for Fun.
 
 
@@ -6,7 +6,7 @@ A hobby project in C which implements a virtual machine with very loose specific
 
 The plan is to make it cross-platform compatible, but as it is developed under Linux current implementation relies on ANSI escape sequences for "screen output".
 
-###compiling
+### Compiling
 
 vm_eira builds with cmake
 
@@ -15,9 +15,9 @@ vm_eira builds with cmake
 
 Executables are placed in the "build" sub directory
 
-##Hardware Description
+## Hardware Description
 
-###I/O PORT
+### I/O PORT
 
 The Eira machine has an I/O port consisting of 16 inputs and 16 outputs.
 It is possible to set the input port by writing to the file `DEV_IO_INPUT` (defined in ioport.h)
@@ -35,7 +35,7 @@ Set input pins 2,3,4,6 and 11 high.
 
 Returns numeric value of 16 bit output port.
 
-###LOADING PROGRAMS
+### LOADING PROGRAMS
 
 The program memory can be loaded when the machine is started using command
 line options or at a later stage by using the internal program loader.
@@ -45,7 +45,7 @@ The program loader is defined in prg.h as DEV_PRG_LOADER and is used:
 e.g  
 `echo bin/eira_test.bin > machine/prg_load`
 
-###MEMORY MAP
+### MEMORY MAP
 
 ```text
 
