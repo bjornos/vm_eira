@@ -35,8 +35,7 @@
 #include <sys/types.h>
 
 #include "cpu.h"
-#include "gpu.h"
-#include "display.h"
+#include "vdc.h"
 #include "ioport.h"
 #include "memory.h"
 
@@ -53,9 +52,10 @@ struct _machine {
 	uint8_t RAM[RAM_SIZE];
 	struct _cpu_regs cpu_regs;
 	struct _machine_reg mach_regs;
-	struct _gpu_regs gpu_regs;
+	struct _vdc_regs vdc_regs;
 	struct _display_adapter display;
 	struct _io_regs *ioport;
+	exception_t exception;
 };
 
 #endif /* __MACHINE_H_ */

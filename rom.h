@@ -25,7 +25,7 @@
 #include "opcodes.h"
 #include "registers.h"
 #include "prg.h"
-#include "display.h"
+#include "vdc.h"
 
 const uint32_t program_reset[] = {
 	/* jump back to start of ROM */
@@ -58,6 +58,8 @@ const uint32_t rom[] = {
 	(diwtrt << 0),
 
 	(diclr << 0),
+
+	(diwtrt << 0),
 
 	(mov << 0) | (R1 << 8)  | OP_DST_REG | (0x00 << 16), 			/* r1 = value of "end" marker */
 	(mov << 0) | (R4 << 8)  | OP_DST_REG | (0x0A << 16), 			/* r4 = pos x = 10*/

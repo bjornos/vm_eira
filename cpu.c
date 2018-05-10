@@ -25,7 +25,7 @@
 #include "exception.h"
 #include "opcodes.h"
 #include "memory.h"
-#include "display.h"
+#include "vdc.h"
 #include "utils.h"
 #include "machine.h"
 
@@ -246,45 +246,40 @@ static void cpu_decode_instruction(void *mach)
 			break;
 		case diwait:
 			debug_opcode(dbg_info, dbg_index, "diwait");
+			machine->cpu_regs.vdc_request = 1;
 			break;
 		case dimd:
 			debug_opcode(dbg_info, dbg_index, "dimd");
-			machine->cpu_regs.exception =
-				display_request(machine, DISPLAY_INIT);
+			machine->cpu_regs.vdc_request = 1;
 			break;
 		case diclr:
 			debug_opcode(dbg_info, dbg_index, "diclr");
-			machine->cpu_regs.exception =
-				display_request(machine, DISPLAY_CLR);
+			machine->cpu_regs.vdc_request = 1;
 			break;
 		case diwtrt:
 			debug_opcode(dbg_info, dbg_index, "diwtrt");
-			machine->cpu_regs.exception =
-				display_request(machine, DISPLAY_WAIT_RETRACE);
+			machine->cpu_regs.vdc_request = 1;
 			break;
 		case disetxy:
 			debug_opcode(dbg_info, dbg_index, "setposxy");
-			machine->cpu_regs.exception =
-				display_request(machine, DISPLAY_SETXY);
+			machine->cpu_regs.vdc_request = 1;
 			break;
 		case dichar:
 			debug_opcode(dbg_info, dbg_index, "putchar");
-			machine->cpu_regs.exception =
-				display_request(machine, DISPLAY_SETC);
-			break;
+			machine->cpu_regs.vdc_request = 1;
 			break;
 		default: machine->cpu_regs.exception = EXC_INSTR;
 			break;
 	}
 
-	if (machine->cpu_regs.dbg) { // consider move this into debug_opcode so that it will show in case of hang
-		display_request(machine, DISPLAY_WAIT_RETRACE);
-		machine->display.enabled = 0;
-		gotoxy(1,15);
+	if (machine->cpu_regs.dbg) { /* consider move this into debug_opcode so that it will show in case of hang */
+		while(machine->vdc_regs.display.refresh); /* yup. good place for a deadlock */
+		machine->vdc_regs.display.enabled = 0;
+		vdc_gotoxy(1,15);
 		dump_instr(dbg_info, dbg_index);
-		gotoxy(1,15 + DBG_HISTORY + 4);
+		vdc_gotoxy(1,15 + DBG_HISTORY + 4);
 		dump_regs(machine->cpu_regs.GP_REG);
-		machine->display.enabled = 1; /* fixme: bug*/
+		machine->vdc_regs.display.enabled = 1; /* fixme: bug*/
 	}
 
 }
@@ -313,6 +308,7 @@ static void cpu_handle_exception(void *mach)
 	break;
 	case EXC_DISP:
 	case EXC_GPU:
+	case EXC_VDC:
 			printf("display error ");
 	break;
 	case EXC_IOPORT:
@@ -323,7 +319,7 @@ static void cpu_handle_exception(void *mach)
 			exception_keepalive = 1;
 	break;
 	default:
-			printf("unknown exception %d ",
+			printf("unknown exception %lu ",
 				machine->cpu_regs.exception);
 	break;
 	}
@@ -345,6 +341,7 @@ static void cpu_fetch_instruction(struct _cpu_regs *cpu_regs)
 	memset(dbg_info + dbg_index, 0x00, sizeof(struct _dbg));
 
 	cpu_regs->gpu_request = 0;
+	cpu_regs->vdc_request = 0;
 }
 
 void cpu_reset(void *mach)
@@ -384,6 +381,11 @@ void *cpu_machine(void *mach)
 
 		cpu_fetch_instruction(&machine->cpu_regs);
 		cpu_decode_instruction(machine);
+
+		if (machine->cpu_regs.vdc_request)
+			machine->cpu_regs.exception =
+				vdc_add_instr(&machine->vdc_regs,
+					(uint32_t *)&machine->RAM[machine->cpu_regs.pc]);
 
 		if (machine->cpu_regs.exception)
 			cpu_handle_exception(machine);

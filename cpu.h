@@ -25,7 +25,7 @@
 #include <stdint.h>
 
 #include "registers.h"
-#include "display.h"
+#include "vdc.h"
 
 #define CPU_CLOCK_FREQ	50	/* in Hz */
 
@@ -49,8 +49,9 @@ struct _cpu_regs {
 	unsigned long pc;		/* program counter */
 	int sp;				/* stack pointer */
 	int cr;				/* conditional register */
-	char exception;
+	long exception;
 	unsigned char gpu_request;
+	unsigned char vdc_request;
 	unsigned char reset;
 	unsigned char dbg;		/* enable debug mode */
 	unsigned char panic;		/* halt cpu */

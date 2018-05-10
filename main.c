@@ -26,6 +26,7 @@
 #include "prg.h"
 #include "rom.h"
 #include "utils.h"
+#include "vdc.h"
 #include "machine.h"
 
 typedef struct {
@@ -125,7 +126,7 @@ static __inline__ void mem_setup(void)
 	memcpy(machine->mach_regs.boot_anim, rom_txt_segment_boot_anim,
 		sizeof(rom_txt_segment_boot_anim));
 
-	machine->display.frame_buffer = machine->RAM + MEM_START_GPU_FB;
+	machine->vdc_regs.frame_buffer = machine->RAM + MEM_START_VDC_FB;
 
 	machine->mach_regs.prg_loading = (uint8_t *)&machine->RAM + MEM_PRG_LOADING;
 
@@ -169,7 +170,7 @@ static __inline__ int machine_create_devices(void)
 int main(int argc,char *argv[])
 {
 	struct argp argp = {opts, parse_opt, args_doc, doc};
-	pthread_t display, cpu, io_in, io_out, prg;
+	pthread_t display, cpu, vdc, io_in, io_out, prg;
 	void *status;
 
 	signal(SIGINT, sig_handler);
@@ -190,18 +191,21 @@ int main(int argc,char *argv[])
 		return -EIO;
 	}
 
+	vdc_cursor_off();
+
 machine_soft_reset:
 
 	mem_setup();
 
 	cpu_reset(machine);
 
-	display_reset(machine);
+	vdc_reset(machine);
 
 	ioport_reset(machine);
 
 	pthread_create(&cpu, NULL, cpu_machine, machine);
-	pthread_create(&display, NULL, display_machine, machine);
+	pthread_create(&vdc, NULL, vdc_machine, machine);
+
 	pthread_create(&prg, NULL, program_loader, machine);
 	pthread_create(&io_in, NULL, ioport_machine_input, machine);
 	pthread_create(&io_out, NULL, ioport_machine_output, machine);
@@ -221,13 +225,14 @@ machine_soft_reset:
 
 	/* release CPU */
 	machine->cpu_regs.reset = 0;
+	machine->vdc_regs.reset = 0;
 
 	pthread_join(cpu, &status);
 
 	ioport_shutdown((int)machine->ioport->input);
 	program_load_cleanup();
 
-	pthread_join(display, &status);
+	pthread_join(vdc, &status);
 	pthread_join(io_in, &status);
 	pthread_join(io_out, &status);
 	pthread_join(prg, &status);
@@ -259,7 +264,7 @@ machine_soft_reset:
 	free(machine);
 	free(status);
 
-	pthread_exit(NULL);
+	vdc_cursor_on();
 
 	return EXIT_SUCCESS;
 }

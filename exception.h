@@ -22,16 +22,17 @@
 #ifndef __EXCEPTION_H_
 #define __EXCEPTION_H_
 
-enum exceptions {
-	EXC_NONE = 0,
-	EXC_INSTR,
-	EXC_MEM,
-	EXC_REG,
-	EXC_PRG,
-	EXC_DISP,
-	EXC_GPU,
-	EXC_IOPORT,
-	EXC_SHUTDOWN,
-};
+typedef enum exceptions {
+	EXC_NONE		= (0 << 0),
+	EXC_INSTR		= (1 << 1),
+	EXC_MEM			= (1 << 2),
+	EXC_REG			= (1 << 3),
+	EXC_PRG			= (1 << 4),
+	EXC_DISP		= (1 << 5),
+	EXC_GPU			= (1 << 6),
+	EXC_IOPORT		= (1 << 7),
+	EXC_SHUTDOWN	= (1 << 8),
+	EXC_VDC			= (1 << 9),
+} exception_t;
 
 #endif /*__EXCEPTION_H_  */

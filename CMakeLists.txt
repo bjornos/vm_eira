@@ -12,7 +12,7 @@ include_directories("${PROJECT_SOURCE_DIR}")
 
 FIND_PACKAGE (Threads)
 
-set(SOURCES main.c display.c prg.h utils.c ioport.c cpu.c prg.c)
+set(SOURCES main.c cpu.c vdc.c utils.c ioport.c prg.c)
 
 add_executable(vm_eira ${PROJECT_SOURCE_DIR}/${SOURCES})
 add_executable(asm2bin ${PROJECT_SOURCE_DIR}/asm2bin.c)

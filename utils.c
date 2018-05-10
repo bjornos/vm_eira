@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include "utils.h"
 #include "registers.h"
-#include "display.h"
+#include "vdc.h"
 
 
 
