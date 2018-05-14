@@ -358,6 +358,7 @@ void cpu_reset(void *mach)
 	machine->cpu_regs.dbg = 0;
 	machine->cpu_regs.gpu_request = 0;
 	machine->cpu_regs.pc = MACHINE_RESET_VECTOR;
+	machine->cpu_regs.mclk = MACHINE_MASTER_CLOCK / 20; /* 70 Hz */
 
 	// (if regs->dbg)
 	for (int d=0; d < DBG_HISTORY; d++)
@@ -373,11 +374,12 @@ void *cpu_machine(void *mach)
 	struct _machine *machine = mach;
 	struct timespec cpu_clk_freq;
 
-	cpu_clk_freq.tv_nsec = 1000000000 / CPU_CLOCK_FREQ;
 	cpu_clk_freq.tv_sec = 0;
 
 	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
+
+		cpu_clk_freq.tv_nsec = 1000000000 / machine->cpu_regs.mclk;
 
 		cpu_fetch_instruction(&machine->cpu_regs);
 		cpu_decode_instruction(machine);

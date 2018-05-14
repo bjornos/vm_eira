@@ -210,11 +210,12 @@ void *vdc_machine(void *mach)
 	struct _machine *machine = mach;
 	struct timespec vdc_clk_freq;
 
-	vdc_clk_freq.tv_nsec = 1000000000 / DISPLAY_FRAME_RATE;  
 	vdc_clk_freq.tv_sec = 0;
 
 	while(!machine->cpu_regs.panic) {
 		while(machine->vdc_regs.reset);
+
+		vdc_clk_freq.tv_nsec = 1000000000 / (machine->cpu_regs.mclk * 2);
 
 		vdc_fetch_instr(&machine->vdc_regs);
 

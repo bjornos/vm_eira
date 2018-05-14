@@ -27,8 +27,6 @@
 #include "registers.h"
 #include "vdc.h"
 
-#define CPU_CLOCK_FREQ	50	/* in Hz */
-
 enum op_size {
 	SIZE_BYTE,
 	SIZE_INT,
@@ -50,6 +48,7 @@ struct _cpu_regs {
 	int sp;				/* stack pointer */
 	int cr;				/* conditional register */
 	long exception;
+	unsigned int mclk;
 	unsigned char gpu_request;
 	unsigned char vdc_request;
 	unsigned char reset;

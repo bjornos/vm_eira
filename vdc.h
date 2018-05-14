@@ -35,8 +35,6 @@
 
 #define INSTR_LIST_SIZE 32
 
-#define DISPLAY_FRAME_RATE	100	/* 100 Hz*/
-
 typedef enum {
 	mode_40x12,
 	mode_80x25,

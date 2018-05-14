@@ -41,6 +41,7 @@
 
 #define MACHINE_RESET_VECTOR	(MEM_START_ROM - sizeof(uint32_t))
 #define MACHINE_DEVICE_LIST_END	'\0'
+#define MACHINE_MASTER_CLOCK	1400	/* Master oscillator runs @ 1.4 MHz */
 
 struct _machine_reg {
 		uint8_t *prg_loading;
