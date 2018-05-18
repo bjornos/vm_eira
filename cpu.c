@@ -182,7 +182,7 @@ static void cpu_decode_instruction(void *mach)
 				machine->cpu_regs.pc = (*instr >> 8) - sizeof(uint32_t); /* compensate for pc++ */
 			} else {
 				if ((*instr >> 8) > GP_REG_MAX)
-					machine->cpu_regs.exception = EXC_MEM;
+					machine->cpu_regs.exception |= EXC_MEM;
 				else
 					machine->cpu_regs.pc = machine->cpu_regs.GP_REG[(*instr >> 8)] - sizeof(uint32_t);
 			}
@@ -204,7 +204,7 @@ static void cpu_decode_instruction(void *mach)
 				branch(&machine->cpu_regs, COND_EQ, (*instr >> 16));
 			else {
 				if (addr > GP_REG_MAX)
-					machine->cpu_regs.exception = EXC_MEM;
+					machine->cpu_regs.exception |= EXC_MEM;
 				else
 					branch(&machine->cpu_regs, COND_EQ, machine->cpu_regs.GP_REG[addr]);
 			}
@@ -216,7 +216,7 @@ static void cpu_decode_instruction(void *mach)
 				branch(&machine->cpu_regs, COND_NEQ, (*instr >> 16));
 			else {
 				if (addr > GP_REG_MAX)
-					machine->cpu_regs.exception = EXC_MEM;
+					machine->cpu_regs.exception |= EXC_MEM;
 				else
 					branch(&machine->cpu_regs, COND_NEQ, machine->cpu_regs.GP_REG[addr]);
 			}
@@ -230,7 +230,7 @@ static void cpu_decode_instruction(void *mach)
 			break;
 		case rst:
 			debug_opcode(dbg_info, dbg_index, "rst");
-			machine->cpu_regs.exception = EXC_PRG;
+			machine->cpu_regs.exception |= EXC_PRG;
 			break;
 		case movmr:
 			arg1 = (*instr >> 8) & 0xf;
@@ -238,7 +238,7 @@ static void cpu_decode_instruction(void *mach)
 			debug_opcode(dbg_info, dbg_index, "movmr");
 			debug_args(dbg_info, dbg_index, &arg1, &arg2);
 			if ((arg1 > GP_REG_MAX))
-				machine->cpu_regs.exception = EXC_MEM;
+				machine->cpu_regs.exception |= EXC_MEM;
 			else {
 				machine->cpu_regs.GP_REG[arg1] = machine->RAM[arg2];
 				debug_result(dbg_info, dbg_index,  machine->cpu_regs.GP_REG[arg1]);
@@ -268,7 +268,7 @@ static void cpu_decode_instruction(void *mach)
 			debug_opcode(dbg_info, dbg_index, "putchar");
 			machine->cpu_regs.vdc_request = 1;
 			break;
-		default: machine->cpu_regs.exception = EXC_INSTR;
+		default: machine->cpu_regs.exception |= EXC_INSTR;
 			break;
 	}
 
@@ -287,47 +287,47 @@ static void cpu_decode_instruction(void *mach)
 static void cpu_handle_exception(void *mach)
 {
 	struct _machine *machine = mach;
-	int exception_keepalive = 5000;
+	int exception = 0;
 
-	printf("!! %s: ",__func__);
+	printf("\n!! %s: 0x%x\n",__func__, machine->cpu_regs.exception);
 
 	machine->cpu_regs.panic = 1;
 
-	switch(machine->cpu_regs.exception) {
-	case EXC_INSTR:
-			printf("illegal instruction @0x%X ", (uint32_t)machine->RAM[machine->cpu_regs.pc]);
-		break;
-	case EXC_MEM:
-			printf("cannot access memory ");
-	break;
-	case EXC_REG:
-			printf("cannot access register ");
-	break;
-	case EXC_PRG:
-			printf("stray program ");
-	break;
-	case EXC_DISP:
-	case EXC_GPU:
-	case EXC_VDC:
-			printf("display error ");
-	break;
-	case EXC_IOPORT:
-			printf("I/O error ");
-	break;
-	case EXC_SHUTDOWN:
-			printf("machine shutdown ");
-			exception_keepalive = 1;
-	break;
-	default:
-			printf("unknown exception %lu ",
-				machine->cpu_regs.exception);
-	break;
+	for (int e = 0; e <= EXC_END; e++) {
+		exception = (1 << e);
+		if (machine->cpu_regs.exception & exception) {
+			switch(exception) {
+			case EXC_INSTR:
+				printf("* Illegal instruction@0x%X \n",
+					(uint32_t)machine->RAM[machine->cpu_regs.pc]);
+			break;
+			case EXC_MEM:
+				printf("* Cannot access memory\n");
+			break;
+			case EXC_REG:
+				printf("* Cannot access register\n");
+			break;
+			case EXC_PRG:
+				printf("* Stray program\n");
+			break;
+			case EXC_VDC:
+				printf("* VDC error\n");
+			break;
+			case EXC_IOPORT:
+				printf("* I/O error\n");
+			break;
+			case EXC_SHUTDOWN:
+				printf("* Machine shutdown\n");
+			break;
+			default:
+				printf("? Unknown exception %d\n",
+					machine->cpu_regs.exception);
+			break;
+			}
+		}
 	}
 
 	printf("[pc: %ld]\n", machine->cpu_regs.pc);
-
-	/* guru time... */
-	usleep(1000 * exception_keepalive);
 }
 
 static void cpu_fetch_instruction(struct _cpu_regs *cpu_regs)
@@ -385,7 +385,7 @@ void *cpu_machine(void *mach)
 		cpu_decode_instruction(machine);
 
 		if (machine->cpu_regs.vdc_request)
-			machine->cpu_regs.exception =
+			machine->cpu_regs.exception |=
 				vdc_add_instr(&machine->vdc_regs,
 					(uint32_t *)&machine->RAM[machine->cpu_regs.pc]);
 

@@ -72,11 +72,11 @@ static args_t args;
 void sig_handler(int signo)
 {
 	if (signo == SIGINT) {
-		machine->cpu_regs.exception = EXC_SHUTDOWN;
+		machine->cpu_regs.exception |= EXC_SHUTDOWN;
 		args.debug = 1;
 	}
 	if (signo == SIGPIPE) {
-		machine->cpu_regs.exception = EXC_IOPORT;
+		machine->cpu_regs.exception |= EXC_IOPORT;
 		args.debug = 1;
 	}
 }
@@ -193,8 +193,6 @@ int main(int argc,char *argv[])
 
 	vdc_cursor_off();
 
-machine_soft_reset:
-
 	mem_setup();
 
 	cpu_reset(machine);
@@ -236,14 +234,6 @@ machine_soft_reset:
 	pthread_join(io_in, &status);
 	pthread_join(io_out, &status);
 	pthread_join(prg, &status);
-
-	/* soft reboot @ cpu exception */
-	if ((machine->cpu_regs.exception != EXC_SHUTDOWN) &&
-		(machine->cpu_regs.exception != EXC_NONE)) {
-		args.load_program = NULL;
-		args.debug = 0;
-		goto machine_soft_reset;
-	}
 
 	if (args.machine_check) {
 		machine->ioport->input = IO_IN_TST_VAL;

@@ -47,7 +47,7 @@ struct _cpu_regs {
 	unsigned long pc;		/* program counter */
 	int sp;				/* stack pointer */
 	int cr;				/* conditional register */
-	long exception;
+	unsigned int exception;
 	unsigned int mclk;
 	unsigned char gpu_request;
 	unsigned char vdc_request;
