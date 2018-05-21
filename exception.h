@@ -33,7 +33,6 @@ typedef enum exceptions {
 	EXC_IOPORT		= (1 << 7),
 	EXC_SHUTDOWN	= (1 << 8),
 	EXC_VDC			= (1 << 9),
-	EXC_END			= (1 << 31),
 } exception_t;
 
 #endif /*__EXCEPTION_H_  */

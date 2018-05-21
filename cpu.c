@@ -293,7 +293,7 @@ static void cpu_handle_exception(void *mach)
 
 	machine->cpu_regs.panic = 1;
 
-	for (int e = 0; e <= EXC_END; e++) {
+	for (int e = 0; e <= 31; e++) {
 		exception = (1 << e);
 		if (machine->cpu_regs.exception & exception) {
 			switch(exception) {
