@@ -85,12 +85,12 @@ void *program_loader(void *mach)
 {
 	struct _machine *machine = mach;
 	char prg_name[PRG_NAME_MAX] = { 0 };
-	int fd;
 
 	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
-		fd = open(DEV_PRG_LOAD, O_RDONLY);
+		int fd = open(DEV_PRG_LOAD, O_RDONLY);
+
 		if (fd < 0) {
 			perror("unable to setup program loader");
 			pthread_exit(NULL);
@@ -100,7 +100,8 @@ void *program_loader(void *mach)
 		close(fd);
 
 		/* remove traling newline */
-		strtok(prg_name, "\n"); /* note: not really thread safe */
+		char *save_ptr;
+		strtok_r(prg_name, "\n", &save_ptr);
 
 		if (!machine->cpu_regs.panic)
 			program_load(machine, prg_name, MEM_START_PRG);

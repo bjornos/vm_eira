@@ -35,7 +35,7 @@ enum {
 };
 
 struct _adapter_mode {
-	display_mode name;
+	display_mode mode;
 	uint16_t vertical;
 	uint16_t horizontal;
 	uint32_t resolution;
@@ -48,7 +48,7 @@ static const struct _adapter_mode adapter_mode[] = {
 
 static void display_retrace(struct _vdc_regs *vdc)
 {
-	int cx,cy,addr;
+	int cx,cy;
 
 	if (!vdc->display.enabled)
 		return;
@@ -61,7 +61,7 @@ static void display_retrace(struct _vdc_regs *vdc)
 	vdc->display.refresh = 1;
 
 	for(cy=0; cy < adapter_mode[vdc->display.mode].horizontal; cy++) {
-		addr = (cy * adapter_mode[vdc->display.mode].vertical);
+		int addr = (cy * adapter_mode[vdc->display.mode].vertical);
 		for (cx=0; cx < adapter_mode[vdc->display.mode].vertical; cx++) {
 			vdc_gotoxy(cx,cy);
 			putchar((char)*(vdc->frame_buffer + addr) & 0xff);
@@ -108,7 +108,7 @@ void vdc_decode_instr(struct _vdc_regs *vdc, struct _display_adapter *display,st
 		return EXC_DISP;*/
 
 	VDC_DBG(vdc_gotoxy(1,21));
-	VDC_DBG(printf("vdc instr:\t0x%x\t\tip: %d  \n",opcode, vdc->instr_ptr));
+	VDC_DBG(printf("vdc instr:\t0x%x\t\tip: %u  \n",opcode, vdc->instr_ptr));
 
 	switch(opcode) {
 		case diwait:
@@ -144,7 +144,7 @@ void vdc_decode_instr(struct _vdc_regs *vdc, struct _display_adapter *display,st
 			}
 			break;
 		default:
-			printf("vdc error unknown. instr: 0x%x ip: %d\n", opcode, vdc->instr_ptr);
+			printf("vdc error unknown. instr: 0x%x ip: %u\n", opcode, vdc->instr_ptr);
 			vdc_exception = EXC_VDC;
 			break;
 	}
@@ -160,7 +160,7 @@ exception_t vdc_add_instr(struct _vdc_regs *vdc, uint32_t *instr)
 	pthread_mutex_lock(&vdc->instr_lock);
 
 	VDC_DBG(vdc_gotoxy(1,20));
-	VDC_DBG(printf("vdc adding instr:\t0x%x\t ip: %d \t\t \n",*instr, vdc->instr_ptr));
+	VDC_DBG(printf("vdc adding instr:\t0x%x\t ip: %u \t\t \n",*instr, vdc->instr_ptr));
 
 	vdc->instr_list[vdc->instr_ptr++] = *instr;
 

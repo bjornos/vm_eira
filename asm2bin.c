@@ -82,10 +82,9 @@ const char char_type_argstop[] = ",;\t\n ";
 int which_instr(char *opcode)
 {
 	int i;
-	t_opcode *sym;
 
 	for (i=0; i < NUM_INSTRUCTIONS; i++) {
-		sym = instr_table + i;
+		t_opcode *sym = instr_table + i;
 		if (strcmp(sym->instr, opcode) == 0)
 			return sym->val;
 	}

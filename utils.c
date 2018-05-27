@@ -63,12 +63,12 @@ void dump_instr(struct _dbg *dbg, int dbg_index)
 	printf("=============================================================\n");
 	for (q=0; q < DBG_HISTORY; q++) {
 		printf("\033[2K");
-		printf("%d\t", q);
+		printf("%u\t", q);
 		printf("0x%08x\t", dbg[c].instr);
 		printf("%-16s", dbg[c].opcode);
 		printf("%d\t", dbg[c].op_arg1);
 		printf("%d\t", dbg[c].op_arg2);
-		printf("%ld\t\n", dbg[c].op_result);
+		printf("%lu\t\n", dbg[c].op_result);
 		c = (c -1) % DBG_HISTORY;
 	}
 	printf("\n");

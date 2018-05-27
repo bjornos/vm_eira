@@ -110,8 +110,7 @@ static uint16_t cpu_decode_mnemonic(struct _cpu_regs *cpu_regs, uint8_t *RAM, ui
 			cpu_regs->exception = EXC_MEM;
 			goto mnemonic_out;
 		}
-
-		*(dst) = (void*)RAM + local_dst;
+		*(dst) = (uint16_t *)((uint8_t *)RAM + local_dst);
 		if (opsize == SIZE_INT)
 			src = cpu_regs->GP_REG[local_src] & 0xffff;
 		else
@@ -320,14 +319,13 @@ static void cpu_handle_exception(void *mach)
 				printf("* Machine shutdown\n");
 			break;
 			default:
-				printf("? Unknown exception %d\n",
-					machine->cpu_regs.exception);
+				printf("? Unknown exception\n");
 			break;
 			}
 		}
 	}
 
-	printf("[pc: %ld]\n", machine->cpu_regs.pc);
+	printf("[pc: %lu]\n", machine->cpu_regs.pc);
 }
 
 static void cpu_fetch_instruction(struct _cpu_regs *cpu_regs)

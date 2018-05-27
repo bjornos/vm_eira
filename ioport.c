@@ -53,8 +53,6 @@ void ioport_shutdown(int input_state)
 void *ioport_machine_output(void *mach)
 {
 	struct _machine *machine = mach;
-	char *outval;
-	int fd;
 	struct timespec io_clk_freq;
 	int hz = 100; /* 100 Hz */
 
@@ -64,13 +62,13 @@ void *ioport_machine_output(void *mach)
 	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
-		fd = open(DEV_IO_OUTPUT, O_WRONLY);
+		int fd = open(DEV_IO_OUTPUT, O_WRONLY);
 		if (fd < 0) {
 			perror("unable to access output port");
 			machine->cpu_regs.exception = EXC_IOPORT;
 			pthread_exit(NULL);
 		}
-		outval = int_to_str((int)machine->ioport->output);
+		char *outval = int_to_str((int)machine->ioport->output);
 
 		if (write(fd, outval, strlen(outval)) == -1) {
 			if (errno == EPIPE)
@@ -90,12 +88,11 @@ void *ioport_machine_input(void *mach)
 {
 	struct _machine *machine = mach;
 	char inval[4] = { 0 };
-	int fd;
 
 	while(!machine->cpu_regs.panic) {
 		while(machine->cpu_regs.reset);
 
-		fd = open(DEV_IO_INPUT, O_RDONLY);
+		int fd = open(DEV_IO_INPUT, O_RDONLY);
 		if (fd < 0) {
 			perror("unable to access input port");
 			machine->cpu_regs.exception = EXC_IOPORT;

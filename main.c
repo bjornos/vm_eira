@@ -170,7 +170,7 @@ static __inline__ int machine_create_devices(void)
 int main(int argc,char *argv[])
 {
 	struct argp argp = {opts, parse_opt, args_doc, doc};
-	pthread_t display, cpu, vdc, io_in, io_out, prg;
+	pthread_t cpu, vdc, io_in, io_out, prg;
 	void *status;
 
 	signal(SIGINT, sig_handler);
