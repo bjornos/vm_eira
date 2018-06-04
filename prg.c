@@ -27,7 +27,7 @@
 void program_load(struct _machine *machine, const char filename[], uint16_t addr) {
 	FILE *prog;
 	struct _prg_format program;
-
+	int r;
 
 	prog = fopen(filename,"rb");
 	if (prog == NULL) {
@@ -36,27 +36,45 @@ void program_load(struct _machine *machine, const char filename[], uint16_t addr
 	}
 	PRG_DEBUG(printf("loading %s\n", filename));
 
-	fread(&program.header,sizeof(struct _prg_header), 1, prog);
-
-	if (program.header.magic == PRG_MAGIC_HEADER) {
-		program.code_segment = malloc(program.header.code_size * sizeof(uint8_t));
-
-		if ((program.header.code_size > (RAM_SIZE - MEM_START_PRG)) ||
-			!program.code_segment) {
-			machine->cpu_regs.exception = EXC_PRG;
-		} else {
-			fread(program.code_segment,program.header.code_size, 1, prog);
-	
-			*machine->mach_regs.prg_loading = PRG_LOADING;
-	
-			memcpy(&machine->RAM[addr], program.code_segment, program.header.code_size);
-
-			*machine->mach_regs.prg_loading = PRG_LOADING_DONE;
-	
-			free(program.code_segment);
-		}
+	r = fread(&program.header, sizeof(struct _prg_header), 1, prog);
+	if (r != 1) {
+		PRG_DEBUG(printf("cannot open program %s: Corrupt header.\n", filename));
+		goto prg_load_close;
 	}
 
+	if (program.header.magic != PRG_MAGIC_HEADER) {
+		PRG_DEBUG(printf("cannot open program %s: Missing magic in header.\n", filename));
+		goto prg_load_close;
+	}
+
+	if (program.header.code_size > (RAM_SIZE - MEM_START_PRG)) {
+		machine->cpu_regs.exception = EXC_PRG;
+		PRG_DEBUG(printf("cannot open program %s: Not enough memory.\n", filename));
+		goto prg_load_close;
+	}
+
+
+	program.code_segment = malloc(program.header.code_size * sizeof(uint8_t));
+	if (!program.code_segment){
+		goto prg_load_close;
+	}
+
+
+	r = fread(program.code_segment,program.header.code_size, 1, prog);
+	if (r != 1) {
+			PRG_DEBUG(printf("cannot open program %s: Code segment corrupt.\n", filename));
+			goto prg_load_free;
+	}
+	
+	*machine->mach_regs.prg_loading = PRG_LOADING;
+	
+	memcpy(&machine->RAM[addr], program.code_segment, program.header.code_size);
+
+	*machine->mach_regs.prg_loading = PRG_LOADING_DONE;
+	
+prg_load_free:
+	free(program.code_segment);
+prg_load_close:
 	fclose(prog);
 }
 
@@ -75,8 +93,9 @@ void program_load_cleanup(void)
 	fd = open(DEV_PRG_LOAD, O_WRONLY);
 	if (fd == -1)
 		return;
-	else
-		write(fd, NULL, 1);
+	else {
+		int t = write(fd, NULL, 1); /* t silence compiler warning */
+	}
 
 	close(fd);
 }
@@ -95,7 +114,8 @@ void *program_loader(void *mach)
 			perror("unable to setup program loader");
 			pthread_exit(NULL);
 		}
-		read(fd, prg_name, sizeof(prg_name));
+
+		int t = read(fd, prg_name, sizeof(prg_name)); /* t silence compiler warning */
 
 		close(fd);
 

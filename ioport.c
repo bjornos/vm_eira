@@ -36,15 +36,16 @@ void ioport_shutdown(int input_state)
 {
 	char *in_port;
 	int fd;
+	int t;
 
 	fd = open(DEV_IO_OUTPUT, O_RDONLY);
-	read(fd, NULL, 4);
+	t = read(fd, NULL, 4); /* t silence compiler warning */
 	close(fd);
 
 	in_port = int_to_str(input_state);
 
 	fd = open(DEV_IO_INPUT, O_WRONLY);
-	write(fd, in_port, strlen(in_port));
+	t = write(fd, in_port, strlen(in_port));
 	close(fd);
 
 	free(in_port);
@@ -98,7 +99,7 @@ void *ioport_machine_input(void *mach)
 			machine->cpu_regs.exception = EXC_IOPORT;
 			pthread_exit(NULL);
 		}
-		read(fd, inval, sizeof(inval));
+		int t = read(fd, inval, sizeof(inval)); /* t silence compiler warning */
 		close(fd);
 
 		machine->ioport->input = atoi(inval);
