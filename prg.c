@@ -106,8 +106,6 @@ void *program_loader(void *mach)
 	char prg_name[PRG_NAME_MAX] = { 0 };
 
 	while(!machine->cpu_regs.panic) {
-		while(machine->cpu_regs.reset);
-
 		int fd = open(DEV_PRG_LOAD, O_RDONLY);
 
 		if (fd < 0) {
@@ -123,7 +121,7 @@ void *program_loader(void *mach)
 		char *save_ptr;
 		strtok_r(prg_name, "\n", &save_ptr);
 
-		if (!machine->cpu_regs.panic)
+		if (!machine->cpu_regs.panic || !machine->cpu_regs.reset)
 			program_load(machine, prg_name, MEM_START_PRG);
 	}
 

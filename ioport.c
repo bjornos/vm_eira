@@ -55,13 +55,14 @@ void *ioport_machine_output(void *mach)
 {
 	struct _machine *machine = mach;
 	struct timespec io_clk_freq;
-	int hz = 100; /* 100 Hz */
-
-	io_clk_freq.tv_nsec = 1000000000 / hz;
 	io_clk_freq.tv_sec = 0;
 
 	while(!machine->cpu_regs.panic) {
-		while(machine->cpu_regs.reset);
+		io_clk_freq.tv_nsec = 1000000000 / (machine->cpu_regs.mclk * 4);
+
+		while(machine->cpu_regs.reset) {
+			nanosleep(&io_clk_freq, NULL);
+		}
 
 		int fd = open(DEV_IO_OUTPUT, O_WRONLY);
 		if (fd < 0) {
@@ -89,9 +90,15 @@ void *ioport_machine_input(void *mach)
 {
 	struct _machine *machine = mach;
 	char inval[4] = { 0 };
+	struct timespec io_clk_freq;
+	io_clk_freq.tv_sec = 0;
 
 	while(!machine->cpu_regs.panic) {
-		while(machine->cpu_regs.reset);
+		io_clk_freq.tv_nsec = 1000000000 / (machine->cpu_regs.mclk * 4);
+
+		while(machine->cpu_regs.reset) {
+			nanosleep(&io_clk_freq, NULL);
+		}
 
 		int fd = open(DEV_IO_INPUT, O_RDONLY);
 		if (fd < 0) {

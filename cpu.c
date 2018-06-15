@@ -272,7 +272,8 @@ static void cpu_decode_instruction(void *mach)
 	}
 
 	if (machine->cpu_regs.dbg) { /* consider move this into debug_opcode so that it will show in case of hang */
-		while(machine->vdc_regs.display.refresh); /* yup. good place for a deadlock */
+		while(machine->vdc_regs.display.refresh)
+			usleep(1000);
 		machine->vdc_regs.display.enabled = 0;
 		vdc_gotoxy(1,15);
 		dump_instr(dbg_info, dbg_index);
@@ -338,7 +339,6 @@ static void cpu_fetch_instruction(struct _cpu_regs *cpu_regs)
 	dbg_index = (dbg_index + 1) % DBG_HISTORY;
 	memset(dbg_info + dbg_index, 0x00, sizeof(struct _dbg));
 
-	cpu_regs->gpu_request = 0;
 	cpu_regs->vdc_request = 0;
 }
 
@@ -354,7 +354,7 @@ void cpu_reset(void *mach)
 	machine->cpu_regs.panic = 0;
 	machine->cpu_regs.cr = COND_UNDEF;
 	machine->cpu_regs.dbg = 0;
-	machine->cpu_regs.gpu_request = 0;
+	machine->cpu_regs.vdc_request = 0;
 	machine->cpu_regs.pc = MACHINE_RESET_VECTOR;
 	machine->cpu_regs.mclk = MACHINE_MASTER_CLOCK / 20; /* 70 Hz */
 
@@ -375,7 +375,12 @@ void *cpu_machine(void *mach)
 	cpu_clk_freq.tv_sec = 0;
 
 	while(!machine->cpu_regs.panic) {
-		while(machine->cpu_regs.reset);
+
+		cpu_clk_freq.tv_nsec = 1000000000 / machine->cpu_regs.mclk;
+
+		while(machine->cpu_regs.reset) {
+			nanosleep(&cpu_clk_freq, NULL);
+		}
 
 		cpu_clk_freq.tv_nsec = 1000000000 / machine->cpu_regs.mclk;
 

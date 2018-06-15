@@ -49,11 +49,10 @@ struct _cpu_regs {
 	int cr;				/* conditional register */
 	unsigned int exception;
 	unsigned int mclk;
-	unsigned char gpu_request;
-	unsigned char vdc_request;
-	unsigned char reset;
-	unsigned char dbg;		/* enable debug mode */
-	unsigned char panic;		/* halt cpu */
+	uint8_t vdc_request;
+	uint8_t reset;
+	uint8_t dbg;		/* enable debug mode */
+	uint8_t panic;		/* halt cpu */
 };
 
 void cpu_reset(void *mach);
