@@ -59,10 +59,10 @@ struct _vdc_regs {
 	uint8_t *text_buffer;
 	uint32_t instr_list[INSTR_LIST_SIZE];
 	uint32_t curr_instr;
-	unsigned char instr_ptr;
+	uint8_t instr_ptr;
 	pthread_mutex_t instr_lock;
-	int exception;
-	unsigned char reset;
+	exception_t exception;
+	uint8_t reset;
 	struct _display_adapter display;
 };
 

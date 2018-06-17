@@ -27,7 +27,7 @@
 #include "machine.h"
 #include "utils.h"
 
-#define VDC_DBG(x) x
+#define VDC_DBG(x)
 
 enum {
 	VDC_LOCKED,
@@ -46,7 +46,10 @@ static const struct _adapter_mode adapter_mode[] = {
 	{mode_80x25, 80, 25, 80*25},
 };
 
-static void display_retrace(struct _vdc_regs *vdc)
+static void (*display_retrace)(struct _vdc_regs *vdc);
+static void (*display_clear)(struct _vdc_regs *vdc);
+
+static void display_retrace_text_mode(struct _vdc_regs *vdc)
 {
 	int cx,cy;
 
@@ -72,11 +75,26 @@ static void display_retrace(struct _vdc_regs *vdc)
 	vdc->display.refresh = 0;
 }
 
-static void display_wait_retrace(struct _vdc_regs *vdc)
+static void display_clear_text_mode(struct _vdc_regs *vdc)
 {
-	while(vdc->display.refresh);
+	if (!vdc->display.enabled) {
+			vdc->exception = EXC_DISP;
+			return;
+	}
+
+	memset(&vdc->frame_buffer[0], ' ', adapter_mode[vdc->display.mode].resolution);
 }
 
+static void display_wait_retrace(struct _vdc_regs *vdc)
+{
+	if (!vdc->display.enabled) {
+			vdc->exception = EXC_DISP;
+			return;
+	}
+
+	while(vdc->display.refresh)
+		usleep(100);
+}
 
 static exception_t vdc_set_mode(struct _vdc_regs *vdc, display_mode this_mode)
 {
@@ -84,31 +102,65 @@ static exception_t vdc_set_mode(struct _vdc_regs *vdc, display_mode this_mode)
 	vdc->display.cursor_data.y = 0;
 	vdc->display.cursor_data.face = '\0';
 
-	if (this_mode < mode_unknown)
-		vdc->display.mode = this_mode;
-	else
-		return EXC_DISP;
+	switch(this_mode) {
+		case mode_80x25:
+		case mode_40x12:
+			display_retrace = display_retrace_text_mode;
+			display_clear = display_clear_text_mode;
+			break;
+		case mode_unknown:
+			return EXC_DISP;
+			break;
+	}
 
-	memset(vdc->frame_buffer,' ', adapter_mode[vdc->display.mode].resolution);
+	vdc->display.mode = this_mode;
 	vdc->display.refresh = 0;
+
+	display_clear(vdc);
+
 	vdc->display.enabled = 1;
 
 	return EXC_NONE;
 }
 
-
-void vdc_decode_instr(struct _vdc_regs *vdc, struct _display_adapter *display,struct _machine *machine)
+static __inline__ exception_t vdc_put_char(struct _machine *machine)
 {
-	uint8_t opcode;
-	int vdc_exception = EXC_NONE;
+	struct _vdc_regs *vdc = &machine->vdc_regs;
+	char c;
+	int addr;
 
-	opcode = vdc->curr_instr & 0xff;
+	if ((vdc->display.mode != mode_80x25) && (vdc->display.mode != mode_40x12))
+		return EXC_VDC;
 
-	/*if (!machine->display.enabled && (request != DISPLAY_INIT))
-		return EXC_DISP;*/
+	if (!vdc->display.enabled)
+			return EXC_DISP;
 
-	VDC_DBG(vdc_gotoxy(1,21));
-	VDC_DBG(printf("vdc instr:\t0x%x\t\tip: %u  \n",opcode, vdc->instr_ptr));
+	if (vdc->curr_instr & OP_SRC_MEM) {
+		if  ((vdc->curr_instr >> 16) > MEM_START_RW) {
+			c = machine->RAM[(vdc->curr_instr >> 16)];
+		} else {
+			c = machine->RAM[ machine->cpu_regs.GP_REG [ (vdc->curr_instr >> 16)] ];
+		}
+	} else if (vdc->curr_instr & OP_SRC_REG) {
+			c = machine->cpu_regs.GP_REG[(vdc->curr_instr >> 16) & 0xff ];
+	} else {
+		c = (vdc->curr_instr >> 16) & 0xff;
+	}
+
+	addr = (vdc->display.cursor_data.y * adapter_mode[vdc->display.mode].vertical) + vdc->display.cursor_data.x;
+
+	if ((addr + MEM_START_VDC_FB) > RAM_SIZE)
+		return EXC_VDC;
+
+	*(vdc->frame_buffer + addr) = c;
+
+	return EXC_NONE;
+}
+
+static void vdc_decode_instr(struct _machine *machine)
+{
+	struct _vdc_regs *vdc = &machine->vdc_regs;
+	uint8_t opcode = vdc->curr_instr & 0xff;
 
 	switch(opcode) {
 		case diwait:
@@ -117,39 +169,23 @@ void vdc_decode_instr(struct _vdc_regs *vdc, struct _display_adapter *display,st
 			display_wait_retrace(vdc);
 			break;
 		case dimd:
-			vdc_exception = vdc_set_mode(vdc, (vdc->curr_instr >> 8));
+			vdc->exception = vdc_set_mode(vdc, (vdc->curr_instr >> 8));
 			break;
  		case diclr:
-			memset(&vdc->frame_buffer[0], ' ', adapter_mode[vdc->display.mode].resolution);
+ 			display_clear(vdc);
 			break;
 		case disetxy:
 			vdc->display.cursor_data.x = machine->cpu_regs.GP_REG[ (vdc->curr_instr >> 16) & 0xff ];
 			vdc->display.cursor_data.y = machine->cpu_regs.GP_REG[ (vdc->curr_instr >> 24) & 0xff ];
 			break;
-		case dichar: {
-			char c;
-			int addr;
-			if (vdc->curr_instr & OP_SRC_MEM) {
-				if  ((vdc->curr_instr >> 16) > MEM_START_RW) {
-					c = machine->RAM[(vdc->curr_instr >> 16)];
-				} else {
-					c = machine->RAM[ machine->cpu_regs.GP_REG [ (vdc->curr_instr >> 16)] ];
-				}
-			} else if (vdc->curr_instr & OP_SRC_REG) {
-				c = machine->cpu_regs.GP_REG[(vdc->curr_instr >> 16) & 0xff ];
-			} else
-				c = (vdc->curr_instr >> 16) & 0xff;
-			addr = (vdc->display.cursor_data.y * adapter_mode[vdc->display.mode].vertical) + vdc->display.cursor_data.x;
-			*(vdc->frame_buffer + addr) = c;
-			}
+		case dichar:
+			vdc->exception = vdc_put_char(machine);
 			break;
 		default:
 			printf("vdc error unknown. instr: 0x%x ip: %u\n", opcode, vdc->instr_ptr);
-			vdc_exception = EXC_VDC;
+			vdc->exception = EXC_VDC;
 			break;
 	}
-
-	vdc->exception = vdc_exception;
 }
 
 exception_t vdc_add_instr(struct _vdc_regs *vdc, uint32_t *instr)
@@ -202,6 +238,11 @@ void vdc_reset(void *mach)
 	machine->vdc_regs.instr_ptr = 0;
 	machine->vdc_regs.exception = EXC_NONE;
 
+	/* default to text mode */
+	machine->vdc_regs.display.mode = mode_40x12;
+	display_retrace = display_retrace_text_mode;
+	display_clear = display_clear_text_mode;
+
 	pthread_mutex_init(&machine->vdc_regs.instr_lock, NULL);
 }
 
@@ -213,13 +254,15 @@ void *vdc_machine(void *mach)
 	vdc_clk_freq.tv_sec = 0;
 
 	while(!machine->cpu_regs.panic) {
-		while(machine->vdc_regs.reset);
-
 		vdc_clk_freq.tv_nsec = 1000000000 / (machine->cpu_regs.mclk * 2);
+
+		while(machine->vdc_regs.reset) {
+			nanosleep(&vdc_clk_freq, NULL);
+		}
 
 		vdc_fetch_instr(&machine->vdc_regs);
 
-		vdc_decode_instr(&machine->vdc_regs, &machine->display, machine);
+		vdc_decode_instr(machine);
 
 		if (machine->vdc_regs.display.enabled)
 			display_retrace(&machine->vdc_regs);

@@ -311,6 +311,7 @@ static void cpu_handle_exception(void *mach)
 				printf("* Stray program\n");
 			break;
 			case EXC_VDC:
+			case EXC_DISP:
 				printf("* VDC error\n");
 			break;
 			case EXC_IOPORT:
