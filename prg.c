@@ -30,6 +30,10 @@ void program_load(struct _machine *machine, const char filename[], uint16_t addr
 	int r;
 
 	prog = fopen(filename,"rb");
+
+	if (machine->cpu_regs.panic || machine->cpu_regs.reset)
+		goto prg_load_close;
+
 	if (prog == NULL) {
 		PRG_DEBUG(printf("cannot open program %s\n", filename));
 		return;
