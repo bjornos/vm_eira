@@ -31,9 +31,6 @@ void program_load(struct _machine *machine, const char filename[], uint16_t addr
 
 	prog = fopen(filename,"rb");
 
-	if (machine->cpu_regs.panic || machine->cpu_regs.reset)
-		goto prg_load_close;
-
 	if (prog == NULL) {
 		PRG_DEBUG(printf("cannot open program %s\n", filename));
 		return;
@@ -94,11 +91,12 @@ void program_load_cleanup(void)
 {
 	int fd;
 
-	fd = open(DEV_PRG_LOAD, O_WRONLY);
+	fd = open(DEV_PRG_LOAD, O_RDWR);
 	if (fd == -1)
 		return;
 	else {
-		int t = write(fd, NULL, 1); /* t silence compiler warning */
+		if (write(fd, "q", 1) != 1)
+			perror("problem in program_load_cleanup()");
 	}
 
 	close(fd);
@@ -110,23 +108,28 @@ void *program_loader(void *mach)
 	char prg_name[PRG_NAME_MAX] = { 0 };
 
 	while(!machine->cpu_regs.panic) {
-		int fd = open(DEV_PRG_LOAD, O_RDONLY);
+		int fd = open(DEV_PRG_LOAD, O_RDONLY | O_TRUNC);
 
 		if (fd < 0) {
 			perror("unable to setup program loader");
 			pthread_exit(NULL);
 		}
 
-		int t = read(fd, prg_name, sizeof(prg_name)); /* t silence compiler warning */
-
+		int l = read(fd, prg_name, sizeof(prg_name));
 		close(fd);
+
+		if (l == -1) {
+			perror("error while loading program");
+			continue;
+		}
 
 		/* remove traling newline */
 		char *save_ptr;
 		strtok_r(prg_name, "\n", &save_ptr);
 
-		if (!machine->cpu_regs.panic || !machine->cpu_regs.reset)
+		if (!machine->cpu_regs.panic && !machine->cpu_regs.reset)
 			program_load(machine, prg_name, MEM_START_PRG);
+
 	}
 
 	pthread_exit(NULL);
