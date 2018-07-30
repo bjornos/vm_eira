@@ -383,8 +383,6 @@ void *cpu_machine(void *mach)
 			nanosleep(&cpu_clk_freq, NULL);
 		}
 
-		cpu_clk_freq.tv_nsec = 1000000000 / machine->cpu_regs.mclk;
-
 		cpu_fetch_instruction(&machine->cpu_regs);
 		cpu_decode_instruction(machine);
 
