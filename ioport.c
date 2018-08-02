@@ -40,13 +40,24 @@ void ioport_shutdown(int input_state)
 
 	fd = open(DEV_IO_OUTPUT, O_RDONLY);
 	t = read(fd, NULL, 4); /* t silence compiler warning */
+
 	close(fd);
+
+	/* to be fair, reading to NULL should render a bad address error */
+	if (t != -1) {
+		perror("something fuzzy going on in read@ioport_shutdown");
+	}
 
 	in_port = int_to_str(input_state);
 
 	fd = open(DEV_IO_INPUT, O_WRONLY);
 	t = write(fd, in_port, strlen(in_port));
+
 	close(fd);
+
+	if (t != strlen(in_port)) {
+		perror("write error in ioport shutdown");
+	}
 
 	free(in_port);
 }
@@ -107,7 +118,13 @@ void *ioport_machine_input(void *mach)
 			pthread_exit(NULL);
 		}
 		int t = read(fd, inval, sizeof(inval)); /* t silence compiler warning */
+
 		close(fd);
+
+		if (t == -1) {
+			perror("error reading I/O");
+			continue;
+		}
 
 		machine->ioport->input = atoi(inval);
 	}
