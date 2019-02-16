@@ -44,6 +44,7 @@ struct _adapter_mode {
 static const struct _adapter_mode adapter_mode[] = {
 	{mode_40x12, 40, 12, 40*12},
 	{mode_80x25, 80, 25, 80*25},
+	{mode_640x480, 640, 480, 640*480}, /* 300kb */
 };
 
 static void (*display_retrace)(struct _vdc_regs *vdc);

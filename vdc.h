@@ -38,6 +38,7 @@
 typedef enum {
 	mode_40x12,
 	mode_80x25,
+	mode_640x480,
 	mode_unknown,
 } display_mode;
 

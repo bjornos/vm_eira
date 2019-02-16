@@ -22,10 +22,10 @@
 #ifndef __MEMORY_H_
 #define __MEMORY_H_
 
-#define RAM_SIZE		0xffff
+#define RAM_SIZE		0x80000 /* 512kb */
 
 #define MEM_START_VDC_FB	MEM_START_VDC
-#define MEM_START_VDC		0x7fff
+#define MEM_START_VDC		0x20000 /* 128kb */
 
 #define MEM_START_GPU_FB	MEM_START_GPU
 #define MEM_START_GPU		0x7fff
