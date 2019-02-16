@@ -2,6 +2,7 @@ CMakeCache.txt
 MakeFiles/
 CMakeFiles/
 Makefile
-build/
+vm_eira
+asm2bin
 cmake_install.cmake
 
