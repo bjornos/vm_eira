@@ -3,9 +3,11 @@ cmake_minimum_required(VERSION 2.8)
 project(vm_eira)
 
 # Set the output folder where your program will be created
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)
+set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+
+set(CMAKE_BUILD_TYPE Debug)
 
 # The following folder will be included
 include_directories("${PROJECT_SOURCE_DIR}")
