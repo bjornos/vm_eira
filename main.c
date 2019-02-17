@@ -119,12 +119,8 @@ static __inline__ void mem_setup(void)
 	memset(machine->RAM, 0x00, RAM_SIZE);
 
 	machine->mach_regs.boot_msg = (uint8_t *)&machine->RAM + MEM_ROM_BOOT_MSG;
-	memcpy(machine->mach_regs.boot_msg, rom_txt_segment_boot_head,
-		sizeof(rom_txt_segment_boot_head));
 
 	machine->mach_regs.boot_anim = (uint8_t *)&machine->RAM + MEM_ROM_BOOT_ANIM;
-	memcpy(machine->mach_regs.boot_anim, rom_txt_segment_boot_anim,
-		sizeof(rom_txt_segment_boot_anim));
 
 	machine->vdc_regs.frame_buffer = machine->RAM + MEM_START_VDC_FB;
 
@@ -133,6 +129,12 @@ static __inline__ void mem_setup(void)
 	*(machine->mach_regs.prg_loading) = PRG_LOADING_DONE;
 
 	memcpy(machine->RAM + MEM_START_PRG, program_reset, sizeof(program_reset));
+
+	memcpy(machine->mach_regs.boot_msg, rom_txt_segment_boot_head,
+		sizeof(rom_txt_segment_boot_head));
+
+	memcpy(machine->mach_regs.boot_anim, rom_txt_segment_boot_anim,
+		sizeof(rom_txt_segment_boot_anim));
 }
 
 static __inline__ void machine_remove_devices(void)
