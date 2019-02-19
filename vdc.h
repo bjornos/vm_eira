@@ -23,6 +23,7 @@
 #define __VDC_H__
 
 #include <stdint.h>
+#include <SDL.h>
 #include <pthread.h>
 
 #include "exception.h"
@@ -48,11 +49,20 @@ struct _cursor_data {
 	char face;
 };
 
+struct _adapter_mode {
+	display_mode mode;
+	uint16_t vertical;
+	uint16_t horizontal;
+	uint32_t resolution;
+};
+
 struct _display_adapter {
 	struct _cursor_data cursor_data;
 	int refresh;
 	display_mode mode;
 	int enabled;
+	SDL_Window *screen;
+	SDL_Surface *screen_surface;
 };
 
 struct _vdc_regs {

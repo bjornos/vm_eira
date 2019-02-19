@@ -21,7 +21,11 @@
 
 #include <string.h>
 
+#include <SDL.h>
+
 #include "vdc.h"
+#include "vdc_console.h"
+#include "vdc_vga.h"
 #include "opcodes.h"
 #include "memory.h"
 #include "machine.h"
@@ -34,57 +38,14 @@ enum {
 	VDC_UNLOCKED
 };
 
-struct _adapter_mode {
-	display_mode mode;
-	uint16_t vertical;
-	uint16_t horizontal;
-	uint32_t resolution;
-};
-
-static const struct _adapter_mode adapter_mode[] = {
+const struct _adapter_mode const adapter_mode[] = {
 	{mode_40x12, 40, 12, 40*12},
 	{mode_80x25, 80, 25, 80*25},
-	{mode_640x480, 640, 480, 640*480}, /* 300kb */
+	{mode_640x480, 640, 480, 640*480},
 };
 
 static void (*display_retrace)(struct _vdc_regs *vdc);
 static void (*display_clear)(struct _vdc_regs *vdc);
-
-static void display_retrace_text_mode(struct _vdc_regs *vdc)
-{
-	int cx,cy;
-
-	if (!vdc->display.enabled)
-		return;
-
-	if (!vdc->frame_buffer) {
-		fprintf(stderr, "No display mem!\n");
-		return;
-	}
-
-	vdc->display.refresh = 1;
-
-	for(cy=0; cy < adapter_mode[vdc->display.mode].horizontal; cy++) {
-		int addr = (cy * adapter_mode[vdc->display.mode].vertical);
-		for (cx=0; cx < adapter_mode[vdc->display.mode].vertical; cx++) {
-			vdc_gotoxy(cx,cy);
-			putchar((char)*(vdc->frame_buffer + addr) & 0xff);
-			addr++;
-		}
-	}
-
-	vdc->display.refresh = 0;
-}
-
-static void display_clear_text_mode(struct _vdc_regs *vdc)
-{
-	if (!vdc->display.enabled) {
-			vdc->exception = EXC_DISP;
-			return;
-	}
-
-	memset(&vdc->frame_buffer[0], ' ', adapter_mode[vdc->display.mode].resolution);
-}
 
 static void display_wait_retrace(struct _vdc_regs *vdc)
 {
@@ -97,24 +58,29 @@ static void display_wait_retrace(struct _vdc_regs *vdc)
 		usleep(100);
 }
 
-static exception_t vdc_set_mode(struct _vdc_regs *vdc, display_mode this_mode)
+static exception_t vdc_set_mode(struct _vdc_regs *vdc, display_mode mode)
 {
 	vdc->display.cursor_data.x = 0;
 	vdc->display.cursor_data.y = 0;
 	vdc->display.cursor_data.face = '\0';
 
-	switch(this_mode) {
+	switch(mode) {
 		case mode_80x25:
 		case mode_40x12:
-			display_retrace = display_retrace_text_mode;
-			display_clear = display_clear_text_mode;
+			display_retrace = display_retrace_mode_console;
+			display_clear = display_clear_mode_console;
+			break;
+		case mode_640x480:
+			display_init_vga(&vdc->display, &mode);
+			display_retrace = display_retrace_mode_vga;
+			display_clear = display_clear_mode_vga;
 			break;
 		case mode_unknown:
 			return EXC_DISP;
 			break;
 	}
 
-	vdc->display.mode = this_mode;
+	vdc->display.mode = mode;
 	vdc->display.refresh = 0;
 
 	display_clear(vdc);
@@ -129,6 +95,9 @@ static __inline__ exception_t vdc_put_char(struct _machine *machine)
 	struct _vdc_regs *vdc = &machine->vdc_regs;
 	char c;
 	int addr;
+
+	if (vdc->display.mode == mode_640x480)
+		return EXC_NONE;
 
 	if ((vdc->display.mode != mode_80x25) && (vdc->display.mode != mode_40x12))
 		return EXC_VDC;
@@ -233,6 +202,9 @@ void vdc_reset(void *mach)
 	machine->vdc_regs.display.enabled = 0;
 	machine->vdc_regs.display.refresh = 0;
 
+	machine->vdc_regs.display.screen = NULL;
+	machine->vdc_regs.display.screen_surface = NULL;
+
 	for (int i=0; i < INSTR_LIST_SIZE; i++)
 		machine->vdc_regs.instr_list[i] = diwait;
 
@@ -241,8 +213,8 @@ void vdc_reset(void *mach)
 
 	/* default to text mode */
 	machine->vdc_regs.display.mode = mode_40x12;
-	display_retrace = display_retrace_text_mode;
-	display_clear = display_clear_text_mode;
+	display_retrace = display_retrace_mode_console;
+	display_clear = display_clear_mode_console;
 
 	pthread_mutex_init(&machine->vdc_regs.instr_lock, NULL);
 }
@@ -251,6 +223,7 @@ void *vdc_machine(void *mach)
 {
 	struct _machine *machine = mach;
 	struct timespec vdc_clk_freq;
+	SDL_Event vdc_events;
 
 	vdc_clk_freq.tv_sec = 0;
 
@@ -270,7 +243,19 @@ void *vdc_machine(void *mach)
 		
 		machine->cpu_regs.exception |= machine->vdc_regs.exception;
 
+		if (machine->vdc_regs.display.mode == mode_640x480) {
+			SDL_PollEvent(&vdc_events);
+
+			if (vdc_events.type == SDL_QUIT)
+ 				machine->cpu_regs.panic = 1;
+		}
+
 		nanosleep(&vdc_clk_freq, NULL);
+	}
+
+	if (machine->vdc_regs.display.mode == mode_640x480) {
+		SDL_DestroyWindow(machine->vdc_regs.display.screen);
+		SDL_Quit();
 	}
 
 	pthread_exit(NULL);
