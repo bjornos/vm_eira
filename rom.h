@@ -70,7 +70,7 @@ const uint32_t rom[] = {
 	/* store pc. effectively creating a label that can be used with jmp */
 	(stopc << 0) | (R10 << 8),
 
-	(disetxy << 0) | R4  << 16 | (R5 << 24),				/* print chars from R6*/
+	(disetxy << 0) | R4  << 8 | (R5 << 20),			/* print chars from R6*/
 	(dichar << 0) | OP_SRC_MEM | (R6 << 16),
 
 	(add << 0) | (R4 << 8)  | OP_DST_REG | (0x01 << 16),			/* r4++ - x pos ++ */
@@ -88,7 +88,7 @@ const uint32_t rom[] = {
 
 	(stopc << 0) | (R10 << 8),						/* store pc for new label */
 
-	(disetxy << 0) | R4  << 16 | (R5 << 24),
+	(disetxy << 0) | R4  << 8 | (R5 << 20),
 	(dichar << 0) | OP_SRC_MEM | (R6 << 16),
 
 	(add << 0) | (R6 << 8)  | OP_DST_REG | (0x01 << 16),			/* r6++ - next char */
@@ -110,7 +110,7 @@ const uint32_t rom[] = {
 	/* mark that a program currently is being loaded */
 	(mov << 0) | (R4 << 8)  | OP_DST_REG | (0x0F << 16), 	/* xpos = 15 */
 	(mov << 0) | (R5 << 8)  | OP_DST_REG | (0x02 << 16), 	/* ypos = 2 */
-	(disetxy << 0) | R4  << 16 | (R5 << 24),
+	(disetxy << 0) | R4  << 8 | (R5 << 20),
 	(dichar << 0) | ('$' << 8),
 
 	/* keep spinning the wheel */

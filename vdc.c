@@ -145,8 +145,8 @@ static void vdc_decode_instr(struct _machine *machine)
  			display_clear(vdc);
 			break;
 		case disetxy:
-			vdc->display.cursor_data.x = machine->cpu_regs.GP_REG[ (vdc->curr_instr >> 16) & 0xff ];
-			vdc->display.cursor_data.y = machine->cpu_regs.GP_REG[ (vdc->curr_instr >> 24) & 0xff ];
+			vdc->display.cursor_data.x = machine->cpu_regs.GP_REG[ (vdc->curr_instr >> 8) & 0xfff ];
+			vdc->display.cursor_data.y = machine->cpu_regs.GP_REG[ (vdc->curr_instr >> 20) & 0xfff ];
 			break;
 		case dichar:
 			vdc->exception = vdc_put_char(machine);

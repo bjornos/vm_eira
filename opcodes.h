@@ -270,6 +270,7 @@
  * mode:
  * 0x01: 40x12
  * 0x02: 80x25
+ * 0x03: 640x480 (VGA)
  *
  *
  * | 1000 1100 | 0000 0000 | 0000 0000 0000 0000 |
@@ -309,8 +310,8 @@
  *
  * set cursor/pixelpos at x,y
  *
- * | 0010 1100 | 0000  0000 | 0000 0000 | 0000 0000 |
- *   0         8  reserved  16   xpos  24    ypos
+ * | 0010 1100 | 0000  0000 0000 | 0000 0000 0000 |
+ *   0         8       xpos      20     ypos
  *
  *   xpos and ypos are general purpose registers containing
  *   x and y pixel position.
