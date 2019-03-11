@@ -5,4 +5,4 @@ Makefile
 vm_eira
 asm2bin
 cmake_install.cmake
-
+sample.bin
