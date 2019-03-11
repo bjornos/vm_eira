@@ -267,6 +267,10 @@ static void cpu_decode_instruction(void *mach)
 			debug_opcode(dbg_info, dbg_index, "putchar");
 			machine->cpu_regs.vdc_request = 1;
 			break;
+		case diputpixel:
+			debug_opcode(dbg_info, dbg_index, "putpixel");
+			machine->cpu_regs.vdc_request = 1;
+			break;
 		default: machine->cpu_regs.exception |= EXC_INSTR;
 			break;
 	}

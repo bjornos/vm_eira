@@ -127,6 +127,30 @@ static __inline__ exception_t vdc_put_char(struct _machine *machine)
 	return EXC_NONE;
 }
 
+static __inline__ exception_t vdc_set_pixel(struct _machine *machine)
+{
+	struct _vdc_regs *vdc = &machine->vdc_regs;
+	char c;
+	int addr;
+
+	if (!vdc->display.enabled)
+			return EXC_DISP;
+
+	addr = (vdc->display.cursor_data.y * adapter_mode[vdc->display.mode].vertical) + vdc->display.cursor_data.x;
+
+	if ((addr + MEM_START_VDC_FB) > RAM_SIZE){
+		fprintf(stderr, "\nMEM=%d   addr: %d --- %d  %d  %d\n",addr + MEM_START_VDC_FB, addr, vdc->display.cursor_data.y, adapter_mode[vdc->display.mode].vertical, vdc->display.cursor_data.x);
+		return EXC_VDC;
+	}
+
+	*(vdc->frame_buffer + addr) = 1;
+
+	return EXC_NONE;
+}
+
+
+
+
 static void vdc_decode_instr(struct _machine *machine)
 {
 	struct _vdc_regs *vdc = &machine->vdc_regs;
@@ -150,6 +174,9 @@ static void vdc_decode_instr(struct _machine *machine)
 			break;
 		case dichar:
 			vdc->exception = vdc_put_char(machine);
+			break;
+		case diputpixel:
+			vdc->exception = vdc_set_pixel(machine);
 			break;
 		default:
 			printf("vdc error unknown. instr: 0x%x ip: %u\n", opcode, vdc->instr_ptr);

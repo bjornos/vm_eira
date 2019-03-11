@@ -2,6 +2,75 @@
 
 extern const struct _adapter_mode const adapter_mode[];
 
+/*
+ * Set the pixel at (x, y) to the given value
+ * NOTE: The surface must be locked before calling this!
+ */
+void putpixel(SDL_Surface *surface, int x, int y, uint32_t pixel)
+{
+    int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to set */
+    uint8_t *p = (uint8_t *)surface->pixels + y * surface->pitch + x * bpp;
+
+    switch(bpp) {
+    case 1:
+        *p = pixel;
+        break;
+
+    case 2:
+        *(uint16_t *)p = pixel;
+        break;
+
+    case 3:
+        if(SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+            p[0] = (pixel >> 16) & 0xff;
+            p[1] = (pixel >> 8) & 0xff;
+            p[2] = pixel & 0xff;
+        } else {
+            p[0] = pixel & 0xff;
+            p[1] = (pixel >> 8) & 0xff;
+            p[2] = (pixel >> 16) & 0xff;
+        }
+        break;
+
+    case 4:
+        *(uint32_t *)p = pixel;
+        break;
+    }
+}
+
+//static __inline__ exception_t vdc_put_pixel(struct _machine *machine)
+static __inline__ exception_t vdc_put_pixel(struct _vdc_regs *vdc)
+{
+	//struct _vdc_regs *vdc = &machine->vdc_regs;
+
+	if (vdc->display.mode != mode_640x480)
+		return EXC_VDC;
+
+	//addr = (vdc->display.cursor_data.y * adapter_mode[vdc->display.mode].vertical) + vdc->display.cursor_data.x;
+
+	/*if ((addr + MEM_START_VDC_FB) > RAM_SIZE)
+		return EXC_VDC;*/
+
+
+   uint32_t yellow = SDL_MapRGB(vdc->display.screen_surface->format, 0xff, 0xff, 0x00);
+
+    int x = vdc->display.cursor_data.x;
+    int y = vdc->display.cursor_data.y;
+
+    /* Lock the screen for direct access to the pixels */
+    if ( SDL_LockSurface(vdc->display.screen_surface) < 0 ) {
+            fprintf(stderr, "Can't lock screen: %s\n", SDL_GetError());
+            return EXC_VDC;
+        }
+
+    putpixel(vdc->display.screen_surface, x, y, yellow);
+
+        SDL_UnlockSurface(vdc->display.screen_surface);
+
+        return EXC_NONE;
+}
+
 exception_t display_init_vga(struct _display_adapter *disp, display_mode *mode)
 {
 	if (SDL_WasInit(SDL_INIT_EVERYTHING) & SDL_INIT_VIDEO) {
@@ -34,14 +103,84 @@ exception_t display_init_vga(struct _display_adapter *disp, display_mode *mode)
 
 	return EXC_NONE;
 }
+static int SuperA = 0;
+static int SuperB = 0;
+static int SuperC = 0;
 
 void display_retrace_mode_vga(struct _vdc_regs *vdc)
 {
+	int cx,cy;
+	uint32_t color = SDL_MapRGB(vdc->display.screen_surface->format, 0xff, 0xff, 0x00);
+	uint16_t px,py;
+
+	if (!vdc->display.enabled)
+		return;
+
+	if (!vdc->frame_buffer) {
+		fprintf(stderr, "No display mem!\n");
+		return;
+	}
+
+	vdc->display.refresh = 1;
+    /* Lock the screen for direct access to the pixels */
+    if ( SDL_LockSurface(vdc->display.screen_surface) < 0 ) {
+            fprintf(stderr, "Can't lock screen: %s\n", SDL_GetError());
+            //return EXC_VDC;
+        }
+
+	for(cy=0; cy < adapter_mode[vdc->display.mode].horizontal; cy++) {
+		int addr = (cy * adapter_mode[vdc->display.mode].vertical);
+		for (cx=0; cx < adapter_mode[vdc->display.mode].vertical; cx++) {
+			if (*(vdc->frame_buffer + addr) != 0x00) {
+				//fprintf(stderr, "%d\n", *(vdc->frame_buffer + addr));
+				color = SDL_MapRGB(vdc->display.screen_surface->format, 0x00 + SuperC, 0x00 + SuperB, 0x00 + SuperA);
+				//int px = vdc->display.cursor_data.x;
+				//int py = vdc->display.cursor_data.y;
+				px = cx;
+				py = cy;
+				putpixel(vdc->display.screen_surface, px, py, color);
+			}
+			//putchar((char)*(vdc->frame_buffer + addr) & 0xff);
+			addr++;
+		}
+	}
+
+
+
+
+
+
+        SDL_UnlockSurface(vdc->display.screen_surface);
+
+
+	vdc->display.refresh = 0;
+
+
 	SDL_UpdateWindowSurface(vdc->display.screen);
+
+	if (SuperA < 0xff) {
+		SuperA++;
+	}
+	if (SuperB < 0xff && SuperA==0xff)
+		SuperB++;
+	if (SuperB == 0xff && SuperA == 0xff)
+		SuperC++;
+
+
+	if (SuperA == 0xff && SuperB == 0xff && SuperC == 0xff) {
+		SuperA=0;
+	SuperB=0x00;
+	SuperC=0;
+	}
+
 }
+
+
 
 void display_clear_mode_vga(struct _vdc_regs *vdc)
 {
 	SDL_FillRect(vdc->display.screen_surface, NULL,
 		SDL_MapRGB(vdc->display.screen_surface->format, 0x00, 0x00, 0x00));
+
+	memset(&vdc->frame_buffer[0], 0x00, adapter_mode[vdc->display.mode].resolution);
 }

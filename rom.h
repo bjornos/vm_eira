@@ -28,8 +28,42 @@
 #include "vdc.h"
 
 const uint32_t program_reset[] = {
+	(dimd << 0) | (mode_640x480 << 8),
+	(diwtrt << 0),
+	(diclr << 0),
+	(mov << 0) | (R7 << 8)  | OP_DST_REG | (0x00 << 16), 			/* r1 = value of "end" marker */
+
+	(diwtrt << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(mov << 0) | (R4 << 8)  | OP_DST_REG | (0x0F << 16), 	/* xpos = 15 */
+	(mov << 0) | (R5 << 8)  | OP_DST_REG | (0x02 << 16), 	/* ypos = 2 */
+	(disetxy << 0) | R7  << 8 | (R5 << 20),
+//	(dichar << 0) | ('$' << 8),
+	(diputpixel << 0) | (7 << 8),
+
+	(add << 0) | (R7 << 8)  | OP_DST_REG | (0x01 << 16),			/* r7++ - x pos ++ */
+
 	/* jump back to start of ROM */
-	(jmp << 0) | ((MEM_START_ROM + (sizeof(struct _prg_header) / sizeof(uint32_t))) << 8),
+	//(jmp << 0) | ((MEM_START_ROM + (sizeof(struct _prg_header) / sizeof(uint32_t))) << 8),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(nop << 0),
+	(jmp << 0) | MEM_START_PRG + (4 * sizeof(uint32_t)) << 8,
 	(nop << 0),
 	(halt << 0),
 };

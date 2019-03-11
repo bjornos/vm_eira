@@ -336,4 +336,18 @@
  */
 #define dichar		0x35
 
+/**
+ * Instruction diputpixel
+ *
+ * produces a pixel output in screen display at position
+ * px py.
+ *
+ * | 1010 1100  |  0000 0000 | 0000 0000 0000 0000 |
+ *   0          8  color     16   reserved         
+ *
+ *
+ */
+#define diputpixel		0x36
+
+
 #endif /* __OPCODES_H__ */
