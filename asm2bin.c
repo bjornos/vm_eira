@@ -32,7 +32,7 @@
 #include "rom.h"
 #include "testprogram.h"
 
-static const char* FILE_NAME;
+static const char *FILE_NAME;
 
 enum {
 	DST_MEM,
@@ -47,7 +47,7 @@ typedef struct  {
 } machine_code;
 
 typedef struct {
-	char *instr;
+	const char *instr;
 	int val;
 } t_opcode;
 
@@ -57,6 +57,7 @@ static t_opcode instr_table[] = {
 		{ "add", add },
 		{ "sub", sub },
 		{ "mov", mov },
+		{ "dimd", dimd }
 };
 
 #define DBG(x) x
@@ -240,6 +241,40 @@ static __inline__ uint32_t decode_complex(const char *instr, uint32_t mnemonic, 
 	return mnemonic;
 }
 
+static __inline__ uint32_t decode_halt(uint32_t mnemonic, char *c, int line, int *col)
+{
+	char arg1[16];
+	uint32_t mode;
+
+	DBG(printf("dimd'\n"));
+
+	skip_spaces(&c, line, col);
+	get_argument(&c, arg1, line, col);
+	skip_spaces(&c, line, col);
+
+	DBG(printf("arg1: %s \n", arg1));
+
+	if (strcmp(arg1, "mode_640x480") == 0) {
+		mode = mode_640x480;
+	} else if (strcmp(arg1, "mode_80x25") == 0) {
+		mode = mode_80x25;
+	} else if (strcmp(arg1, "0x01") == 0) {
+		mode = mode_80x25;
+	} else if (strcmp(arg1, "0x02") == 0) {
+		mode = mode_640x480;
+	} else if (atoi(arg1) == 1) {
+		mode = mode_80x25;
+	} else if(atoi(arg1) == 2) {
+		mode = mode_640x480;
+	} else {
+		printf("%s:%d: error: unknown mode %s\n",FILE_NAME, line, arg1);
+		return OPCODE_ENCODE_ERROR;
+	}
+	mode = (dimd << 0) | (mode << 8);
+
+	return mode;
+}
+
 uint32_t encode_instr(char *code_line, int line_nbr)
 {
 	machine_code code;
@@ -282,9 +317,11 @@ uint32_t encode_instr(char *code_line, int line_nbr)
 			break;
 		case sub: mnemonic = decode_complex("sub", code.instr, c, line_nbr, &pos);
 			break;
+		case dimd: mnemonic = decode_halt(code.instr, c, line_nbr, &pos);
+			break;
 		default:
 			printf("%s:%d: error: unknown instruction %s\n",FILE_NAME, line_nbr, instr);
-			return OPCODE_ENCODE_ERROR;
+			mnemonic = OPCODE_ENCODE_ERROR;
 		break;
 	}
 
