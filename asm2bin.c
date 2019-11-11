@@ -32,7 +32,15 @@
 #include "rom.h"
 #include "testprogram.h"
 
-static const char *FILE_NAME;
+#define DBG(x) x
+
+#define NUM_INSTRUCTIONS (sizeof(instr_table) / sizeof(t_opcode))
+
+#define OPCODE_LEN_MAX	16
+
+#define ARG_LEN_MAX 16
+
+#define LINE_LENGTH_MAX 64
 
 enum {
 	DST_MEM,
@@ -51,33 +59,36 @@ typedef struct {
 	int val;
 } t_opcode;
 
+struct _label {
+	uint32_t addr;
+	char id[OPCODE_LEN_MAX];
+};
+
+const char *char_type_instruction = "abcdefghijklmnopqrstuvwxyz:_";
+
+const char *char_type_argument = "1234567890rRxX@_";
+
+const char *char_type_label = "abcdefghijklmnopqrstuvwxyz_1234567890";
+
+const char *char_type_spaces = " \t\n";
+
+const char char_type_argstop[] = ",;\t\n ";
+
+static const char *FILE_NAME;
+static struct _label label_list[64]; /* TODO: make dynamic */
+static uint16_t label_cnt;
+static uint32_t program_addr;
+
 static t_opcode instr_table[] = {
 		{ "halt", halt },
 		{ "nop", nop },
 		{ "add", add },
 		{ "sub", sub },
 		{ "mov", mov },
-		{ "dimd", dimd }
+		{ "dimd", dimd },
+		{ "jmp", jmp }
 };
 
-#define DBG(x) x
-
-#define NUM_INSTRUCTIONS (sizeof(instr_table) / sizeof(t_opcode))
-
-#define OPCODE_LEN_MAX	16
-
-#define ARG_LEN_MAX 16
-
-#define LINE_LENGTH_MAX 64
-
-
-const char *char_type_instruction = "abcdefghijklmnopqrstuvwxyz";
-
-const char *char_type_argument = "1234567890rRxX@";
-
-const char *char_type_spaces = " \t\n";
-
-const char char_type_argstop[] = ",;\t\n ";
 
 
 int which_instr(char *opcode)
@@ -115,6 +126,23 @@ static __inline__ void get_argument(char **c, char *arg, int line, int *col)
 	int pos = 0;
 
 	while (char_is_type(*c, char_type_argument) && (pos < ARG_LEN_MAX)) {
+		*(arg + pos) = *(*c);
+		(void)*(*c)++;
+		if (*col > LINE_LENGTH_MAX) {
+			printf("%s: Line %d: To long (> %d chars).", __func__, line, *col);
+			exit(EXIT_FAILURE);
+		}
+		(*col)++;
+		pos++;
+	}
+	*(arg + pos) = '\0';
+}
+/* FIXME: remove this duplicated function */
+static __inline__ void get_label(char **c, char *arg, int line, int *col)
+{
+	int pos = 0;
+
+	while (char_is_type(*c, char_type_label) && (pos < ARG_LEN_MAX)) {
 		*(arg + pos) = *(*c);
 		(void)*(*c)++;
 		if (*col > LINE_LENGTH_MAX) {
@@ -241,7 +269,7 @@ static __inline__ uint32_t decode_complex(const char *instr, uint32_t mnemonic, 
 	return mnemonic;
 }
 
-static __inline__ uint32_t decode_halt(uint32_t mnemonic, char *c, int line, int *col)
+static __inline__ uint32_t decode_dimd(uint32_t mnemonic, char *c, int line, int *col)
 {
 	char arg1[16];
 	uint32_t mode;
@@ -275,6 +303,35 @@ static __inline__ uint32_t decode_halt(uint32_t mnemonic, char *c, int line, int
 	return mode;
 }
 
+static __inline__ uint32_t decode_jmp(uint32_t mnemonic, char *c, int line, int *col)
+{
+	char arg1[16];
+	uint16_t i;
+	uint32_t pc = 0;
+
+	DBG(printf("jmp\n"));
+
+	skip_spaces(&c, line, col);
+	get_label(&c, arg1, line, col);
+	skip_spaces(&c, line, col);
+
+	DBG(printf("arg1: %s \n", arg1));
+
+	for (i=0; i < label_cnt; i++) {
+		if (strcmp(label_list[i].id, arg1) == 0) {
+			pc = label_list[i].addr;
+		}
+	}
+
+	if (pc == 0) {
+		printf("%s:%d: error: undeclared label %s\n", FILE_NAME, line, arg1);
+		return OPCODE_ENCODE_ERROR;
+	}
+
+	return ((jmp << 0) | (pc << 8));
+
+}
+
 uint32_t encode_instr(char *code_line, int line_nbr)
 {
 	machine_code code;
@@ -288,14 +345,35 @@ uint32_t encode_instr(char *code_line, int line_nbr)
 
 	if (is_comment(c)) {
 		DBG(printf("decode as comment.\n"));
-		return OPCODE_ENCODE_COMMENT;
+		return OPCODE_ENCODE_SKIP;
 	}
 
 	while (char_is_type(c, char_type_instruction) && (pos < OPCODE_LEN_MAX)) {
 		instr[pos++] = *c++;
 		col++;
 	}
+
 	instr[pos] = '\0';
+
+    if (instr[pos -1] == ':') {
+		instr[pos -1] = '\0';
+
+		DBG(printf("decode as label [ %s ].\n", instr));
+
+		label_list[label_cnt].addr = program_addr;
+		strcpy(label_list[label_cnt].id, instr);
+
+		label_cnt++;
+
+		return OPCODE_ENCODE_SKIP;
+
+	}
+
+/*	if (*c != ';') {
+		printf("%s:%d: %s  %d",FILE_NAME, line_nbr, code_line,*c);
+		printf("%s:%d: error: expected ';' at end of line,\n",FILE_NAME, line_nbr);
+		return OPCODE_ENCODE_ERROR;
+	}*/
 
 	code.instr = which_instr(instr);
 	code.args = 0;
@@ -317,7 +395,9 @@ uint32_t encode_instr(char *code_line, int line_nbr)
 			break;
 		case sub: mnemonic = decode_complex("sub", code.instr, c, line_nbr, &pos);
 			break;
-		case dimd: mnemonic = decode_halt(code.instr, c, line_nbr, &pos);
+		case dimd: mnemonic = decode_dimd(code.instr, c, line_nbr, &pos);
+			break;
+		case jmp: mnemonic = decode_jmp(code.instr, c, line_nbr, &pos);
 			break;
 		default:
 			printf("%s:%d: error: unknown instruction %s\n",FILE_NAME, line_nbr, instr);
@@ -343,15 +423,18 @@ int main(int argc,char *argv[])
 
 	e = line_nbr = 0;
 
+	program_addr = MEM_START_PRG + (sizeof(uint32_t) * 4);
+
 	while (fgets(line, sizeof(line), prg) && !abort) {
 		printf("%s", line);
 		enc[e] = encode_instr(line, line_nbr++);
 		if (enc[e] == OPCODE_ENCODE_ERROR) {
 			abort = 1;
 		}
-		else if (enc[e] != OPCODE_ENCODE_COMMENT) {
-			DBG(printf("0x%x\n", enc[e]));
+		else if (enc[e] != OPCODE_ENCODE_SKIP) {
+			DBG(printf("addr: 0x%x      encode: 0x%x\n", program_addr, enc[e]));
 			e++;
+			program_addr += sizeof(uint32_t);
 		}
 	}
 	fclose(prg);

@@ -24,8 +24,8 @@
 
 #define OPCODE_NAME_MAX	16
 
-/* compiler magic for comment - not really a valid opcode */
-#define OPCODE_ENCODE_COMMENT	0xffff
+/* compiler magic for comment and labels - not really a valid opcode */
+#define OPCODE_ENCODE_SKIP	0xffff
 
 /* compiler magic for complications - not really a valid opcode */
 #define OPCODE_ENCODE_ERROR		0xfffe
