@@ -44,7 +44,7 @@ const struct _adapter_mode const adapter_mode[] = {
 	{mode_640x480, 640, 480, 640*480},
 };
 
-static void (*display_retrace)(struct _vdc_regs *vdc);
+static exception_t (*display_retrace)(struct _vdc_regs *vdc);
 static void (*display_clear)(struct _vdc_regs *vdc);
 
 static void display_wait_retrace(struct _vdc_regs *vdc)
@@ -276,7 +276,6 @@ void *vdc_machine(void *mach)
 			if (vdc_events.type == SDL_QUIT)
  				machine->cpu_regs.panic = 1;
 		}
-
 		nanosleep(&vdc_clk_freq, NULL);
 	}
 

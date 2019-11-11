@@ -2,16 +2,16 @@
 
 extern const struct _adapter_mode const adapter_mode[];
 
-void display_retrace_mode_console(struct _vdc_regs *vdc)
+exception_t display_retrace_mode_console(struct _vdc_regs *vdc)
 {
 	int cx,cy;
 
 	if (!vdc->display.enabled)
-		return;
+		return EXC_VDC;
 
 	if (!vdc->frame_buffer) {
 		fprintf(stderr, "No display mem!\n");
-		return;
+		return EXC_VDC;
 	}
 
 	vdc->display.refresh = 1;
@@ -26,6 +26,8 @@ void display_retrace_mode_console(struct _vdc_regs *vdc)
 	}
 
 	vdc->display.refresh = 0;
+
+	return EXC_NONE;
 }
 
 void display_clear_mode_console(struct _vdc_regs *vdc)
