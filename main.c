@@ -62,7 +62,7 @@ static const char *device_table[] = {
 	DEV_IO_INPUT,
 	DEV_IO_OUTPUT,
 	DEV_PRG_LOAD,
-	MACHINE_DEVICE_LIST_END
+	NULL
 };
 
 static char* doc = "";
@@ -141,8 +141,9 @@ static __inline__ void machine_remove_devices(void)
 {
 	int dev = 0;
 
-	while(device_table[dev] != MACHINE_DEVICE_LIST_END)
+	while(device_table[dev] != NULL) {
 		unlink(device_table[dev++]);
+	}
 
 	remove("machine");
 }
@@ -156,7 +157,7 @@ static __inline__ int machine_create_devices(void)
 
 	mkdir("machine", 0777);
 
-	while(device_table[dev] != MACHINE_DEVICE_LIST_END) {
+	while(device_table[dev] != NULL) {
 		/* create input/output fifo */
 		if (mkfifo(device_table[dev], S_IRUSR| S_IWUSR) < 0) {
 			perror("failed to create device");
