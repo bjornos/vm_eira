@@ -44,6 +44,7 @@ const struct _adapter_mode const adapter_mode[] = {
 	{mode_640x480, 640, 480, 640*480},
 };
 
+static exception_t (*display_set)(struct _machine *machine);
 static exception_t (*display_retrace)(struct _vdc_regs *vdc);
 static void (*display_clear)(struct _vdc_regs *vdc);
 
@@ -69,11 +70,14 @@ static exception_t vdc_set_mode(struct _vdc_regs *vdc, display_mode mode)
 		case mode_40x12:
 			display_retrace = display_retrace_mode_console;
 			display_clear = display_clear_mode_console;
+			display_set = display_put_char;
 			break;
 		case mode_640x480:
 			display_init_vga(&vdc->display, &mode);
 			display_retrace = display_retrace_mode_vga;
 			display_clear = display_clear_mode_vga;
+			display_set = display_put_pixel;
+
 			break;
 		case mode_unknown:
 			return EXC_DISP;
@@ -89,67 +93,6 @@ static exception_t vdc_set_mode(struct _vdc_regs *vdc, display_mode mode)
 
 	return EXC_NONE;
 }
-
-static __inline__ exception_t vdc_put_char(struct _machine *machine)
-{
-	struct _vdc_regs *vdc = &machine->vdc_regs;
-	char c;
-	int addr;
-
-	if (vdc->display.mode == mode_640x480)
-		return EXC_NONE;
-
-	if ((vdc->display.mode != mode_80x25) && (vdc->display.mode != mode_40x12))
-		return EXC_VDC;
-
-	if (!vdc->display.enabled)
-			return EXC_DISP;
-
-	if (vdc->curr_instr & OP_SRC_MEM) {
-		if  ((vdc->curr_instr >> 16) > MEM_START_RW) {
-			c = machine->RAM[(vdc->curr_instr >> 16)];
-		} else {
-			c = machine->RAM[ machine->cpu_regs.GP_REG [ (vdc->curr_instr >> 16)] ];
-		}
-	} else if (vdc->curr_instr & OP_SRC_REG) {
-			c = machine->cpu_regs.GP_REG[(vdc->curr_instr >> 16) & 0xff ];
-	} else {
-		c = (vdc->curr_instr >> 16) & 0xff;
-	}
-
-	addr = (vdc->display.cursor_data.y * adapter_mode[vdc->display.mode].vertical) + vdc->display.cursor_data.x;
-
-	if ((addr + MEM_START_VDC_FB) > RAM_SIZE)
-		return EXC_VDC;
-
-	*(vdc->frame_buffer + addr) = c;
-
-	return EXC_NONE;
-}
-
-static __inline__ exception_t vdc_set_pixel(struct _machine *machine)
-{
-	struct _vdc_regs *vdc = &machine->vdc_regs;
-	char c;
-	int addr;
-
-	if (!vdc->display.enabled)
-			return EXC_DISP;
-
-	addr = (vdc->display.cursor_data.y * adapter_mode[vdc->display.mode].vertical) + vdc->display.cursor_data.x;
-
-	if ((addr + MEM_START_VDC_FB) > RAM_SIZE){
-		fprintf(stderr, "\nMEM=%d   addr: %d --- %d  %d  %d\n",addr + MEM_START_VDC_FB, addr, vdc->display.cursor_data.y, adapter_mode[vdc->display.mode].vertical, vdc->display.cursor_data.x);
-		return EXC_VDC;
-	}
-
-	*(vdc->frame_buffer + addr) = 1;
-
-	return EXC_NONE;
-}
-
-
-
 
 static void vdc_decode_instr(struct _machine *machine)
 {
@@ -173,10 +116,8 @@ static void vdc_decode_instr(struct _machine *machine)
 			vdc->display.cursor_data.y = machine->cpu_regs.GP_REG[ (vdc->curr_instr >> 20) & 0xfff ];
 			break;
 		case dichar:
-			vdc->exception = vdc_put_char(machine);
-			break;
 		case diputpixel:
-			vdc->exception = vdc_set_pixel(machine);
+			vdc->exception = display_set(machine); //vdc_put_char(machine);
 			break;
 		default:
 			printf("vdc error unknown. instr: 0x%x ip: %u\n", opcode, vdc->instr_ptr);

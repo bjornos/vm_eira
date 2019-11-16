@@ -39,3 +39,40 @@ void display_clear_mode_console(struct _vdc_regs *vdc)
 
 	memset(&vdc->frame_buffer[0], ' ', adapter_mode[vdc->display.mode].resolution);
 }
+
+exception_t display_put_char(struct _machine *machine)
+{
+	struct _vdc_regs *vdc = &machine->vdc_regs;
+	char c;
+	int addr;
+
+	if (vdc->display.mode == mode_640x480)
+		return EXC_NONE;
+
+	if ((vdc->display.mode != mode_80x25) && (vdc->display.mode != mode_40x12))
+		return EXC_VDC;
+
+	if (!vdc->display.enabled)
+			return EXC_DISP;
+
+	if (vdc->curr_instr & OP_SRC_MEM) {
+		if  ((vdc->curr_instr >> 16) > MEM_START_RW) {
+			c = machine->RAM[(vdc->curr_instr >> 16)];
+		} else {
+			c = machine->RAM[ machine->cpu_regs.GP_REG [ (vdc->curr_instr >> 16)] ];
+		}
+	} else if (vdc->curr_instr & OP_SRC_REG) {
+			c = machine->cpu_regs.GP_REG[(vdc->curr_instr >> 16) & 0xff ];
+	} else {
+		c = (vdc->curr_instr >> 16) & 0xff;
+	}
+
+	addr = (vdc->display.cursor_data.y * adapter_mode[vdc->display.mode].vertical) + vdc->display.cursor_data.x;
+
+	if ((addr + MEM_START_VDC_FB) > RAM_SIZE)
+		return EXC_VDC;
+
+	*(vdc->frame_buffer + addr) = c;
+
+	return EXC_NONE;
+}

@@ -39,8 +39,10 @@ void putpixel(SDL_Surface *surface, int x, int y, uint32_t pixel)
     }
 }
 
-static __inline__ exception_t vdc_put_pixel(struct _vdc_regs *vdc)
+exception_t display_put_pixel(struct _machine *machine)
 {
+	struct _vdc_regs *vdc = &machine->vdc_regs;
+
 	if (vdc->display.mode != mode_640x480)
 		return EXC_VDC;
 
